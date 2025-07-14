@@ -124,13 +124,37 @@ export default {
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
         },
         formatDate(date) {
+            // return new Intl.DateTimeFormat('en-US', {
+            //     year: 'numeric',
+            //     month: 'short',
+            //     day: 'numeric',
+            //     hour: '2-digit',
+            //     minute: '2-digit'
+            // }).format(date)
+
+            // Handle different date formats
+            let dateObj;
+
+            if (date instanceof Date) {
+                dateObj = date;
+            } else if (typeof date === 'string') {
+                dateObj = new Date(date);
+            } else {
+                return 'Invalid Date';
+            }
+
+            // Check if the date is valid
+            if (isNaN(dateObj.getTime())) {
+                return 'Invalid Date';
+            }
+
             return new Intl.DateTimeFormat('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-            }).format(date)
+            }).format(dateObj);
         },
         getFileIcon(type) {
             const iconMap = {

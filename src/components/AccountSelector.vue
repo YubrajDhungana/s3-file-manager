@@ -5,14 +5,15 @@
             AWS Account
         </label>
         <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
-                :class="{ 'btn-outline-primary': selectedAccount }">
-                {{ getSelectedAccountName(selectedAccount) }}
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" >
+<!--                :class="{ 'btn-outline-primary': selectedAccount }">-->
+                {{ selectedAccountName || 'Select Account'
+              }}
             </button>
             <ul class="dropdown-menu w-100">
                 <li v-for="account in accounts" :key="account.id">
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="#"
-                        @click.prevent="handleAccountSelect(account.id)"
+                        @click.prevent="selectAccount(account.id)"
                         :class="{ 'active': selectedAccount === account.id }">
                         <div>
                             <div class="fw-medium">{{ account.name }}</div>
@@ -32,25 +33,22 @@ export default {
         selectedAccount: {
             type: String,
             required: true
+        },
+        accounts:{
+          type:Array,
+          default: ()=>[]
         }
     },
-    data() {
-        return {
-            accounts: [
-                { id: 'acc-1', name: 'Production Account', region: 'us-east-1' },
-                { id: 'acc-2', name: 'Development Account', region: 'us-west-2' },
-                { id: 'acc-3', name: 'Testing Account', region: 'eu-west-1' }
-            ]
+    computed: {
+        selectedAccountName() {
+          const account = this.accounts.find(a => a.id === this.selectedAccount);
+          return account ? account.name : '';
         }
     },
     methods: {
-        handleAccountSelect(accountId) {
-            this.$emit('accountChange', accountId)
+        selectAccount(accountId) {
+            this.$emit('account-change', accountId)
         },
-        getSelectedAccountName(accountId) {
-            const account = this.accounts.find(acc => acc.id === accountId);
-            return account ? account.name : 'Select Account';
-        }
     }
 }
 </script>
