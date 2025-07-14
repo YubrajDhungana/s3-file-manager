@@ -113,6 +113,7 @@ export default {
 
         }
     },
+
     methods: {
         formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes'

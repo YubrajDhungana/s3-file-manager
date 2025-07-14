@@ -42,7 +42,7 @@
   "files": [
     {
       "id": "1",
-      "name": "document.pdf",
+      "name": "report.pdf",
       "size": 2048576,
       "lastModified": "2024-01-15T10:30:00.000Z",
       "type": "pdf",
@@ -72,7 +72,7 @@
       "name": "statistics_6.pdf",
       "size": 26264267,
       "lastModified": "2025-07-14T17:01:12.934Z",
-      "type": "application",
+      "type": "pdf",
       "bucketId": "bucket-1",
       "accountId": "account-1"
     },
@@ -81,7 +81,7 @@
       "name": "chapter 2 RMI.pdf",
       "size": 802256,
       "lastModified": "2025-07-14T17:04:51.085Z",
-      "type": "application",
+      "type": "pdf",
       "bucketId": "bucket-1",
       "accountId": "account-1"
     },
@@ -90,7 +90,7 @@
       "name": "chapter 1 Introduction to Multimedia.pdf",
       "size": 317945,
       "lastModified": "2025-07-14T17:07:57.556Z",
-      "type": "application",
+      "type": "pdf",
       "bucketId": "bucket-1",
       "accountId": "account-1"
     },
@@ -100,15 +100,6 @@
       "size": 3152230,
       "lastModified": "2025-07-14T17:09:27.488Z",
       "type": "image",
-      "bucketId": "bucket-1",
-      "accountId": "account-1"
-    },
-    {
-      "id": "1752513243862iwocu7489",
-      "name": "CMP 350 Simulation and Modelling.pdf",
-      "size": 2127998,
-      "lastModified": "2025-07-14T17:14:03.863Z",
-      "type": "pdf",
       "bucketId": "bucket-1",
       "accountId": "account-1"
     }

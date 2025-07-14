@@ -140,6 +140,7 @@ export default {
             this.selectedAccount = accountId
             this.selectedBucket = '' // Reset bucket when account changes
             this.buckets = [];
+            this.files = [];
 
             if (accountId) {
                 this.loadBuckets(accountId);
@@ -210,15 +211,25 @@ export default {
             return 'unknown';
         },
 
-        handleFileRename(fileId, newName) {
-            const fileIndex = this.files.findIndex(f => f.id === fileId)
-            if (fileIndex !== -1) {
-                this.files[fileIndex].name = newName
+        async handleFileRename(fileId, newName) {
+            try {
+                await axios.patch(`http://localhost:3001/files/${fileId}`, {
+                    name: newName
+                })
+                this.loadFiles(this.selectedBucket, this.selectedAccount);
+            } catch (error) {
+                console.log("Error renaming file:", error);
+                alert("Error renaming file.");
             }
         },
 
-        handleFileDelete(fileId) {
-            this.files = this.files.filter(f => f.id !== fileId)
+        async handleFileDelete(fileId) {
+            try {
+                await axios.delete(`http://localhost:3001/files/${fileId}`);
+                this.loadFiles(this.selectedBucket, this.selectedAccount);
+            } catch (error) {
+                alert("Error deleting file.");
+            }
         },
 
         handleSearch(query) {

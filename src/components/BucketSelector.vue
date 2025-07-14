@@ -7,21 +7,20 @@
         <div class="dropdown">
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
                 :disabled="!selectedAccount" :class="{ 'btn-outline-primary': selectedBucket }">
-                {{  selectedBucketName || 'Select Account' }}
+                {{ selectedBucketName || 'Select Bucket' }}
             </button>
             <ul class="dropdown-menu w-100">
                 <li v-if="buckets.length === 0" class="dropdown-item-text text-muted">
                     {{ selectedAccount ? 'No buckets available' : 'Select an account first' }}
                 </li>
-                <li v-for="bucket in buckets" :key="bucket.name">
+                <li v-for="bucket in buckets" :key="bucket.id">
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="#"
-                        @click.prevent="selectBucket(bucket.id)"
-                        :class="{ 'active': selectedBucket === bucket.id }">
+                        @click.prevent="selectBucket(bucket.id)" :class="{ 'active': selectedBucket === bucket.id }">
                         <div>
                             <div class="fw-medium">{{ bucket.name }}</div>
-                            <small class="text-muted">{{ bucket.itemCount }} items</small>
+                            <small class="text-muted">{{ bucket.region }}</small>
                         </div>
-                        <i v-if="selectedBucket === bucket.name" class="fas fa-check text-primary"></i>
+                        <i v-if="selectedBucket === bucket.id" class="fas fa-check text-primary"></i>
                     </a>
                 </li>
             </ul>
@@ -41,15 +40,15 @@ export default {
             required: true
         },
         buckets: {
-            type:Array,
-            default: ()=> {}
+            type: Array,
+            default: () => []
         }
     },
-    emits: ['bucketChange'], 
-     computed: {
+    emits: ['bucket-change'],
+    computed: {
         selectedBucketName() {
-          const bucket = this.buckets.find(b => b.id === this.selectedBucket);
-          return bucket ? bucket.name : '';
+            const bucket = this.buckets.find(b => b.id === this.selectedBucket);
+            return bucket ? bucket.name : '';
         }
     },
     methods: {
