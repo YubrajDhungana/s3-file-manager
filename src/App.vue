@@ -74,85 +74,86 @@
     </div>
 </template>
 <script>
-import AccountSelector from './components/AccountSelector.vue'
-import BucketSelector from './components/BucketSelector.vue'
-import FileUpload from './components/FileUpload.vue'
-import FileList from './components/FileList.vue'
-import SearchFilter from './components/SearchFilter.vue'
+import AccountSelector from "./components/AccountSelector.vue";
+import BucketSelector from "./components/BucketSelector.vue";
+import FileUpload from "./components/FileUpload.vue";
+import FileList from "./components/FileList.vue";
+import SearchFilter from "./components/SearchFilter.vue";
 import axios from "axios";
 
 export default {
-    name: 'App',
+    name: "App",
     components: {
         AccountSelector,
         BucketSelector,
         FileUpload,
         FileList,
-        SearchFilter
+        SearchFilter,
     },
     data() {
         return {
-            selectedAccount: '',
-            selectedBucket: '',
-            searchQuery: '',
+            selectedAccount: "",
+            selectedBucket: "",
+            searchQuery: "",
+            nextContinuationToken: null,
             accounts: [],
             buckets: [],
-            files: []
-        }
+            files: [],
+        };
     },
     mounted() {
         this.loadAccounts();
     },
     methods: {
         async loadAccounts() {
-            const res = await axios.get('http://localhost:3001/accounts');
-            if (res.data.length > 0) {
-                this.accounts = res.data;
-            } else {
-                alert("Error loading accounts");
-            }
+            this.accounts = [{ id: "acc1", name: "Account 1", region: "us-east-1" }];
         },
 
-        async loadBuckets(accountId) {
-            if (!accountId) return;
-            try {
-                const res = await axios.get(`http://localhost:3001/buckets?accountId=${accountId}`);
-                if (res.data.length > 0) {
-                    this.buckets = res.data;
-                }
-            } catch (error) {
-                console.error("Error loading buckets:", error);
-                alert("Error loading buckets for the selected account.");
-            }
+        async loadBuckets() {
+            // if (!accountId) return;
+            // try {
+            //     const res = await axios.get(`http://localhost:3001/buckets?accountId=${accountId}`);
+            //     if (res.data.length > 0) {
+            //         this.buckets = res.data;
+            //     }
+            // } catch (error) {
+            //     console.error("Error loading buckets:", error);
+            //     alert("Error loading buckets for the selected account.");
+            // }
+            this.buckets = [
+                { id: "bucket1", name: "uploaded-files", region: "us-east-1" },
+            ];
         },
-        async loadFiles(bucketId, accountId) {
-            if (!bucketId || !accountId) return;
+        async loadFiles() {
             try {
-                const res = await axios.get(`http://localhost:3001/files?bucketId=${bucketId}&accountId=${accountId}`);
-                if (res.data.length > 0) {
-                    this.files = res.data;
+                const res = await axios.get("http://localhost:3000/api/files/", {
+                    params: {
+                        limit: 10,
+                        continuationToken: this.nextContinuationToken,
+                    },
+                });
+                if (res.data.files.files.length > 0) {
+                    this.files = res.data.files.files;
                 }
+                console.log(this.files[1]);
             } catch (error) {
                 alert("Error loading files for the selected bucket.");
             }
         },
         handleAccountChange(accountId) {
-            this.selectedAccount = accountId
-            this.selectedBucket = '' // Reset bucket when account changes
+            this.selectedAccount = accountId;
             this.buckets = [];
             this.files = [];
-
-            if (accountId) {
-                this.loadBuckets(accountId);
-            }
+            this.loadBuckets();
         },
 
-        handleBucketChange(bucketid) {
-            this.selectedBucket = bucketid
+        handleBucketChange(bucketId) {
+            this.selectedBucket = bucketId;
 
-            if (bucketid && this.selectedAccount) {
-                this.loadFiles(bucketid, this.selectedAccount);
-            }
+            // if (bucketid && this.selectedAccount) {
+            //     this.loadFiles(bucketid, this.selectedAccount);
+            // }
+            this.loadFiles();
         },
 
         async handleFileUpload(uploadedFiles) {
@@ -166,14 +167,14 @@ export default {
                         lastModified: new Date().toISOString(),
                         type: this.getFileType(file),
                         bucketId: this.selectedBucket,
-                        accountId: this.selectedAccount
-                    }
+                        accountId: this.selectedAccount,
+                    };
                     console.log("Uploading file:", fileData);
-                    await axios.post('http://localhost:3001/files', fileData, {
+                    await axios.post("http://localhost:3001/files", fileData, {
                         headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    })
+                            "Content-Type": "application/json",
+                        },
+                    });
                 } catch (error) {
                     alert("Error uploading file.");
                 }
@@ -184,38 +185,52 @@ export default {
         // Add this helper method
         getFileType(file) {
             const mimeType = file.type;
-            const extension = file.name.split('.').pop()?.toLowerCase();
+            const extension = file.name.split(".").pop()?.toLowerCase();
 
             // Handle by MIME type first
-            if (mimeType.startsWith('image/')) return 'image';
-            if (mimeType.startsWith('video/')) return 'video';
-            if (mimeType.startsWith('audio/')) return 'audio';
+            if (mimeType.startsWith("image/")) return "image";
+            if (mimeType.startsWith("video/")) return "video";
+            if (mimeType.startsWith("audio/")) return "audio";
 
             // Handle specific types
-            if (mimeType === 'application/pdf') return 'pdf';
-            if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'excel';
-            if (mimeType.includes('word') || mimeType.includes('document')) return 'word';
-            if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'powerpoint';
+            if (mimeType === "application/pdf") return "pdf";
+            if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
+                return "excel";
+            if (mimeType.includes("word") || mimeType.includes("document"))
+                return "word";
+            if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
+                return "powerpoint";
 
             // Fallback to extension
             if (extension) {
                 switch (extension) {
-                    case 'pdf': return 'pdf';
-                    case 'csv': return 'csv';
-                    case 'zip': case 'rar': case '7z': return 'archive';
-                    case 'js': case 'ts': case 'html': case 'css': case 'json': return 'code';
-                    default: return extension;
+                    case "pdf":
+                        return "pdf";
+                    case "csv":
+                        return "csv";
+                    case "zip":
+                    case "rar":
+                    case "7z":
+                        return "archive";
+                    case "js":
+                    case "ts":
+                    case "html":
+                    case "css":
+                    case "json":
+                        return "code";
+                    default:
+                        return extension;
                 }
             }
 
-            return 'unknown';
+            return "unknown";
         },
 
         async handleFileRename(fileId, newName) {
             try {
                 await axios.patch(`http://localhost:3001/files/${fileId}`, {
-                    name: newName
-                })
+                    name: newName,
+                });
                 this.loadFiles(this.selectedBucket, this.selectedAccount);
             } catch (error) {
                 console.log("Error renaming file:", error);
@@ -233,10 +248,10 @@ export default {
         },
 
         handleSearch(query) {
-            this.searchQuery = query
-        }
-    }
-}
+            this.searchQuery = query;
+        },
+    },
+};
 </script>
 
 <style scoped>

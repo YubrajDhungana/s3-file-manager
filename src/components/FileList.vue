@@ -36,13 +36,13 @@
                     <tr v-for="file in filteredFiles" :key="file.id">
                         <td class="align-middle">
                             <div class="d-flex align-items-center">
-                                <i :class="getFileIcon(file.type)" class="file-icon"></i>
+                                <!-- <i :class="getFileIcon(file.type)" class="file-icon"></i> -->
                                 <div v-if="editingFile === file.id" class="flex-grow-1">
                                     <input v-model="editingName" type="text" class="form-control form-control-sm"
                                         @keyup.enter="saveRename(file.id)" @keyup.escape="cancelRename"
                                         @blur="saveRename(file.id)" ref="editInput" />
                                 </div>
-                                <span v-else class="flex-grow-1">{{ file.name }}</span>
+                                <span v-else class="flex-grow-1">{{ file.key }}</span>
                             </div>
                         </td>
                         <td class="align-middle text-muted">
@@ -108,7 +108,7 @@ export default {
             if (!this.searchQuery) return this.files;
 
             return this.files.filter(file =>
-                file.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                file.key.toLowerCase().includes(this.searchQuery.toLowerCase())
             )
 
         }
@@ -157,21 +157,21 @@ export default {
                 minute: '2-digit'
             }).format(dateObj);
         },
-        getFileIcon(type) {
-            const iconMap = {
-                'pdf': 'fas fa-file-pdf text-danger',
-                'image': 'fas fa-file-image text-success',
-                'video': 'fas fa-file-video text-info',
-                'audio': 'fas fa-file-audio text-warning',
-                'csv': 'fas fa-file-csv text-success',
-                'excel': 'fas fa-file-excel text-success',
-                'word': 'fas fa-file-word text-primary',
-                'powerpoint': 'fas fa-file-powerpoint text-warning',
-                'archive': 'fas fa-file-archive text-secondary',
-                'code': 'fas fa-file-code text-info'
-            }
-            return iconMap[type] || 'fas fa-file text-muted'
-        },
+        // getFileIcon(type) {
+        //     const iconMap = {
+        //         'pdf': 'fas fa-file-pdf text-danger',
+        //         'image': 'fas fa-file-image text-success',
+        //         'video': 'fas fa-file-video text-info',
+        //         'audio': 'fas fa-file-audio text-warning',
+        //         'csv': 'fas fa-file-csv text-success',
+        //         'excel': 'fas fa-file-excel text-success',
+        //         'word': 'fas fa-file-word text-primary',
+        //         'powerpoint': 'fas fa-file-powerpoint text-warning',
+        //         'archive': 'fas fa-file-archive text-secondary',
+        //         'code': 'fas fa-file-code text-info'
+        //     }
+        //     return iconMap[type] || 'fas fa-file text-muted'
+        // },
         startRename(file) {
             this.editingFile = file.id
             this.editingName = file.name
