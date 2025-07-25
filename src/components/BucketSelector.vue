@@ -4,64 +4,106 @@
             <i class="fas fa-database me-1"></i>
             S3 Bucket
         </label>
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
-                :disabled="!selectedAccount" :class="{ 'btn-outline-primary': selectedBucket }">
+        <div ref="dropdownRef" class="dropdown" :class="{ show: isDropdownOpen }">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" @click="toggleDropdown"
+                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="!selectedAccount"
+                :class="{ 'btn-outline-primary': selectedBucket }" :aria-expanded="isDropdownOpen" aria-haspopup="true">
                 {{ selectedBucketName || 'Select Bucket' }}
             </button>
-            <ul class="dropdown-menu w-100">
+            <ul class="dropdown-menu w-100" :class="{ show: isDropdownOpen }" role="menu">
                 <li v-if="buckets.length === 0" class="dropdown-item-text text-muted">
                     {{ selectedAccount ? 'No buckets available' : 'Select an account first' }}
                 </li>
                 <li v-for="bucket in buckets" :key="bucket.id">
-                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="#"
-                        @click.prevent="selectBucket(bucket.id)" :class="{ 'active': selectedBucket === bucket.id }">
+                    <button type="button"
+                        class="dropdown-item d-flex justify-content-between align-items-center w-100 border-0 bg-transparent text-start"
+                        href="#" @click.prevent="selectBucket(bucket.id)"
+                        @keydown.enter.prevent="selectBucket(bucket.id)"
+                        @keydown.space.prevent="selectBucket(bucket.id)"
+                        :class="{ 'active': selectedBucket === bucket.id }" role="menuitem"
+                        :tabindex="isDropdownOpen ? 0 : -1">
                         <div>
                             <div class="fw-medium">{{ bucket.name }}</div>
-                            <small class="text-muted">{{ bucket.region }}</small>
+                            <small class="text-muted">{{ bucket.itemCount }} items</small>
                         </div>
                         <i v-if="selectedBucket === bucket.id" class="fas fa-check text-primary"></i>
-                    </a>
+                    </button>
                 </li>
             </ul>
         </div>
     </div>
 </template>
+
 <script>
 export default {
     name: 'BucketSelector',
     props: {
         selectedBucket: {
             type: String,
-            required: true
+            default: ''
         },
         selectedAccount: {
             type: String,
-            required: true
+            default: ''
         },
         buckets: {
             type: Array,
             default: () => []
         }
     },
-    emits: ['bucket-change'],
     computed: {
         selectedBucketName() {
             const bucket = this.buckets.find(b => b.id === this.selectedBucket);
             return bucket ? bucket.name : '';
         }
     },
+    data() {
+        return {
+            isDropdownOpen: false
+        }
+    },
     methods: {
         selectBucket(bucketId) {
             this.$emit('bucket-change', bucketId)
+            this.closeDropdown()
         },
+        toggleDropdown() {
+            if (this.selectedAccount) {
+                this.isDropdownOpen = !this.isDropdownOpen
+            }
+        },
+        closeDropdown() {
+            this.isDropdownOpen = false
+        },
+        handleClickOutside(event) {
+            if (this.$refs.dropdownRef && !this.$refs.dropdownRef.contains(event.target)) {
+                this.closeDropdown()
+            }
+        },
+        handleKeydown(event) {
+            if (event.key === 'Escape') {
+                this.closeDropdown()
+            }
+        }
+    },
+    mounted() {
+        document.addEventListener('click', this.handleClickOutside)
+        document.addEventListener('keydown', this.handleKeydown)
+    },
+    unmounted() {
+        document.removeEventListener('click', this.handleClickOutside)
+        document.removeEventListener('keydown', this.handleKeydown)
     }
-
 }
 </script>
+
+
+
 <style scoped>
-.dropdown-item {
+.dropdown-item,
+.dropdown-item:focus {
     cursor: pointer;
+    outline: none;
 }
 
 .dropdown-item:hover {
@@ -73,7 +115,15 @@ export default {
     color: #0d6efd;
 }
 
+.dropdown-item:focus {
+    background-color: #f8f9fa;
+}
+
 .dropdown-item-text {
     padding: 0.375rem 1rem;
+}
+
+.dropdown-toggle:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 </style>

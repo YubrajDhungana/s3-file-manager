@@ -45,6 +45,12 @@
                 <!-- Main Content Area -->
                 <div class="col-lg-9 col-md-8">
                     <!-- File Upload Section -->
+                    <div v-if="selectedAccount && selectedBucket" class="card card-custom mb-4">
+                        <div class="card-body">
+                            <FolderNavigation :current-path="currentPath" :selected-bucket="selectedBucket"
+                                @path-change="handlePathChange" />
+                        </div>
+                    </div>
                     <div class="card card-custom mb-4">
                         <div class="card-body">
                             <h5 class="card-title mb-3">
@@ -62,10 +68,12 @@
                             <h5 class="card-title mb-3">
                                 <i class="fas fa-folder me-2"></i>
                                 Files
-                                <span class="badge bg-secondary ms-2">{{ files.length }}</span>
+                                <span class="badge bg-secondary ms-2">{{ currentItems.length }}</span>
                             </h5>
-                            <FileList :files="files" :search-query="searchQuery" @file-rename="handleFileRename"
-                                @file-delete="handleFileDelete" />
+                            <FileList :items="currentItems" :search-query="searchQuery" @file-rename="handleFileRename"
+                                @file-delete="handleFileDelete" 
+                                :current-path="currentPath" />
+                                />
                         </div>
                     </div>
                 </div>
@@ -79,6 +87,7 @@ import BucketSelector from "./components/BucketSelector.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FileList from "./components/FileList.vue";
 import SearchFilter from "./components/SearchFilter.vue";
+import FolderNavigation from "./components/FolderNavigation.vue";
 import axios from "axios";
 
 export default {
@@ -89,16 +98,19 @@ export default {
         FileUpload,
         FileList,
         SearchFilter,
+        FolderNavigation
     },
     data() {
         return {
             selectedAccount: "",
             selectedBucket: "",
             searchQuery: "",
+            currentPath: '',
             nextContinuationToken: null,
             accounts: [],
             buckets: [],
             files: [],
+            currentItems: []
         };
     },
     mounted() {
@@ -110,20 +122,32 @@ export default {
         },
 
         async loadBuckets() {
-            // if (!accountId) return;
-            // try {
-            //     const res = await axios.get(`http://localhost:3001/buckets?accountId=${accountId}`);
-            //     if (res.data.length > 0) {
-            //         this.buckets = res.data;
-            //     }
-            // } catch (error) {
-            //     console.error("Error loading buckets:", error);
-            //     alert("Error loading buckets for the selected account.");
-            // }
             this.buckets = [
                 { id: "bucket1", name: "uploaded-files", region: "us-east-1" },
             ];
         },
+
+        async loadFolderContents(path) {
+            try {
+                const response = await axios.get('http://localhost:3000/api/files/listByFolder', {
+                    params: {
+                        folder: path,
+                    }
+                })
+                if (!response.data || response.data.length === 0) {
+                    this.currentItems = [];
+                    return;
+                }
+
+                this.currentItems = response.data.items;
+                console.log("Loaded folder contents:", this.currentItems);
+
+            } catch (error) {
+                console.error('Error loading folder contents:', error)
+                this.currentItems = []
+            }
+        },
+
         async loadFiles() {
             try {
                 const res = await axios.get("http://localhost:3000/api/files/", {
@@ -143,18 +167,26 @@ export default {
         handleAccountChange(accountId) {
             this.selectedAccount = accountId;
             this.buckets = [];
-            this.files = [];
+            this.currentPath = ''
+            this.currentItems = []
             this.loadBuckets();
         },
 
         handleBucketChange(bucketId) {
             this.selectedBucket = bucketId;
-
-            // if (bucketid && this.selectedAccount) {
-            //     this.loadFiles(bucketid, this.selectedAccount);
-            // }
-            this.loadFiles();
+            this.currentPath = ''
+            if (bucketId) {
+                this.loadFolderContents('')
+            } else {
+                this.currentItems = []
+            }
         },
+
+        handlePathChange(newPath) {
+            this.currentPath = newPath
+            this.loadFolderContents(newPath)
+        },
+
 
         async handleFileUpload(uploadedFiles) {
             if (!this.selectedAccount || !this.selectedBucket) return;
