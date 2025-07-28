@@ -56,7 +56,7 @@
                                 <i class="fas fa-upload me-2"></i>
                                 File Upload
                             </h5>
-                            <FileUpload :disabled="!selectedAccount || !selectedBucket"
+                            <FileUpload ref="fileUpload" :disabled="!selectedAccount || !selectedBucket"
                                 @file-upload="handleFileUpload" />
                         </div>
                     </div>
@@ -168,8 +168,7 @@ export default {
 
         async handleFileUpload(uploadedFiles) {
             try {
-
-                this.loading = true;
+                this.$refs.fileUpload.isUploading = true;
                 const formData = new FormData();
 
                 // Append files (works for single or multiple)
@@ -184,6 +183,15 @@ export default {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     },
+                    onUploadProgress: (progressEvent) => {
+                        if (progressEvent.total) {
+                            const progress = Math.round(
+                                (progressEvent.loaded * 100) / progressEvent.total
+                            );
+                            // Update progress in FileUpload component
+                            this.$refs.fileUpload.updateProgress(progress);
+                        }
+                    }
 
                 });
 
@@ -191,8 +199,10 @@ export default {
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
                 console.error('Error uploading files:', error);
+                alert("Error uploading files. Please try again.");
             } finally {
-                this.loading = false;
+                this.$refs.fileUpload.isUploading = false;
+                this.$refs.fileUpload.updateProgress(0);
             }
 
         },
@@ -221,22 +231,29 @@ export default {
             this.loadFolderContents({ path: this.currentPath })
         },
 
-        async handleFileRename(fileId, newName) {
+        async handleFileRename(oldKey, newKey) {
             try {
-                await axios.patch(`http://localhost:3001/files/${fileId}`, {
-                    name: newName,
+                await axios.patch('http://localhost:3000/api/files/rename', {
+                    oldKey: oldKey,
+                    newKey: newKey,
+
                 });
-                this.loadFiles(this.selectedBucket, this.selectedAccount);
+                this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
                 console.log("Error renaming file:", error);
                 alert("Error renaming file.");
             }
         },
 
-        async handleFileDelete(fileId) {
+        async handleFileDelete(key) {
             try {
-                await axios.delete(`http://localhost:3001/files/${fileId}`);
-                this.loadFiles(this.selectedBucket, this.selectedAccount);
+                console.log("Deleting file:", key);
+                await axios.delete('http://localhost:3000/api/files/', {
+                    data: {
+                        filePaths: [key]
+                    }
+                });
+                this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
                 alert("Error deleting file.");
             }

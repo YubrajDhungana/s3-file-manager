@@ -44,7 +44,7 @@ export default {
             default: false
         }
     },
-    emits: ['fileUpload'],
+    emits: ['fileUpload', 'uploadProgress'],
     data() {
         return {
             isDragOver: false,
@@ -72,29 +72,17 @@ export default {
 
             const files = e.dataTransfer?.files
             if (files && files.length > 0) {
-                this.uploadFiles(files)
+                this.$emit('fileUpload', files);
             }
         },
         handleFileSelect(e) {
             const target = e.target
             if (target.files && target.files.length > 0) {
-                this.uploadFiles(target.files)
+                this.$emit('fileUpload', target.files)
             }
         },
-        async uploadFiles(files) {
-            this.isUploading = true
-            this.uploadProgress = 0
-
-            // Simulate upload progress
-            const progressInterval = setInterval(() => {
-                this.uploadProgress += 10
-                if (this.uploadProgress >= 100) {
-                    clearInterval(progressInterval)
-                    this.isUploading = false
-                    this.uploadProgress = 0
-                    this.$emit('fileUpload', files)
-                }
-            }, 200)
+        updateProgress(progress) {
+            this.uploadProgress = progress
         },
         triggerFileInput() {
             if (!this.disabled) {

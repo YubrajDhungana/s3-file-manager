@@ -1,28 +1,21 @@
 <template>
     <div class="item-manager-container">
-        <!-- Status Info -->
-        <!-- <div class="status-info mb-3">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="badge bg-light text-dark">
-                            <i class="fas fa-folder me-1"></i>
-                            {{filteredItems.filter(item => item.isFolder).length}} folders
-                        </div>
-                        <div class="badge bg-light text-dark">
-                            <i class="fas fa-file me-1"></i>
-                            {{filteredItems.filter(item => !item.isFolder).length}} files
-                        </div>
-                    </div>
+        <!-- Bulk Actions Bar -->
+        <div v-if="selectedItems.length > 0" class="bulk-actions-bar mb-3 p-3 bg-light rounded">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted">
+                        {{ selectedItems.length }} item(s) selected
+                    </span>
                 </div>
-                <div class="col-md-4 text-md-end mt-2 mt-md-0">
-                    <small class="text-muted">
-                        Showing {{ startItem }}-{{ endItem }} of {{ filteredItems.length }} items
-                    </small>
+                <div>
+                    <button class="btn btn-sm btn-danger" @click="confirmBulkDelete">
+                        <i class="fas fa-trash me-1"></i>
+                        Delete Selected
+                    </button>
                 </div>
             </div>
-        </div> -->
-
+        </div>
         <!-- Table Container with Fixed Header -->
         <div class="table-container">
             <div v-if="loading" class="empty-state">
@@ -41,6 +34,9 @@
                     <table class="table table-header mb-0">
                         <thead>
                             <tr>
+                                <th scope="col" style="width: 5%;">
+                                    <input type="checkbox" :checked="allItemsSelected" @change="toggleSelectAll">
+                                </th>
                                 <th scope="col" style="width: 40%;">
                                     <i class="fas fa-file me-2"></i>
                                     Name
@@ -71,7 +67,11 @@
                     <table class="table table-hover mb-0">
                         <tbody>
                             <tr v-for="item in items" :key="item.key" @dblclick="handleItemDoubleClick(item)"
-                                :class="{ 'folder-row': item.type === 'folder' }">
+                                :class="{ 'folder-row': item.type === 'folder', 'selected-row': isItemSelected(item) }">
+                                <td style="width: 5%;" class="align-middle">
+                                    <input type="checkbox" v-model="selectedItems" :value="item.key"
+                                        :disabled="item.type === 'folder'">
+                                </td>
                                 <td style="width: 40%;" class="align-middle">
                                     <div class="d-flex align-items-center">
                                         <i :class="getItemIcon(item.type, item.type === 'folder', item.name)"
@@ -122,19 +122,19 @@
                                     <span v-else>-</span>
                                 </td>
                                 <td style="width: 15%;" class="align-middle text-center">
-                                    <div class="action-buttons">
-                                        <button v-if="editingFile !== item.id" type="button"
+                                    <div v-if="item.type === 'folder'" class="text-muted">-</div>
+                                    <div v-else class="action-buttons">
+                                        <button v-if="editingFile !== item.key" type="button"
                                             class="btn btn-sm btn-outline-primary" @click="startRename(item)"
                                             :title="`Rename ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button v-if="editingFile !== item.id" type="button"
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="deleteItem(item.id, item.type === 'folder')"
+                                        <button v-if="editingFile !== item.key" type="button"
+                                            class="btn btn-sm btn-outline-danger" @click="deleteItem(item.key)"
                                             :title="`Delete ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                        <div v-if="editingFile === item.id" class="d-flex gap-1">
+                                        <div v-if="editingFile === item.key" class="d-flex gap-1">
                                             <button type="button" class="btn btn-sm btn-success"
                                                 @click="saveRename(item.id)" title="Save changes">
                                                 <i class="fas fa-check"></i>
@@ -222,11 +222,13 @@ export default {
         },
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete'],
     data() {
         return {
+            selectedItems: [],
             editingFile: null,
             editingName: '',
+            newKey: null,
             currentPage: 1,
             itemsPerPage: 10,
             //storing pagination token for navigation
@@ -237,11 +239,29 @@ export default {
     computed: {
         hasPreviousPage() {
             return this.currentTokenIndex > 0;
-        }
+        },
+        allItemsSelected() {
+            // Only consider files (not folders) for select all
+            const selectableItems = this.items.filter(item => item.type !== 'folder');
+            return selectableItems.length > 0 &&
+                this.selectedItems.length === selectableItems.length;
+        },
     },
 
     methods: {
-
+        isItemSelected(item) {
+            return this.selectedItems.includes(item.key);
+        },
+        toggleSelectAll(event) {
+            if (event.target.checked) {
+                // Select all files (excluding folders)
+                this.selectedItems = this.items
+                    .filter(item => item.type !== 'folder')
+                    .map(item => item.key);
+            } else {
+                this.selectedItems = [];
+            }
+        },
         //pagination method
         gotoNextPage() {
             if (this.isTruncated && !this.loading) {
@@ -375,24 +395,25 @@ export default {
             return iconMap[extension] || 'fas fa-file text-muted'
         },
         startRename(item) {
-            this.editingFile = item.id
+            this.editingFile = item.key
             this.editingName = item.name
         },
         cancelRename() {
             this.editingFile = null
             this.editingName = ''
         },
-        saveRename(itemId) {
+        saveRename(oldKey) {
             if (this.editingName.trim()) {
-                this.$emit('fileRename', itemId, this.editingName.trim())
+                this.newKey = this.currentPath + '/' + this.editingName.trim()
+                console.log('Renaming item:', oldKey, 'to', this.newKey)
+                this.$emit('fileRename', oldKey, this.newKey)
             }
             this.editingFile = null
             this.editingName = ''
         },
-        deleteItem(itemId, isFolder) {
-            const itemType = isFolder ? 'folder' : 'file'
-            if (confirm(`Are you sure you want to delete this ${itemType}?`)) {
-                this.$emit('fileDelete', itemId)
+        deleteItem(key) {
+            if (confirm(`Are you sure you want to delete this file?`)) {
+                this.$emit('fileDelete', key)
             }
         },
         handleItemDoubleClick(item) {
