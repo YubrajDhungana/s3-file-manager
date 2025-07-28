@@ -44,7 +44,6 @@
 
                 <!-- Main Content Area -->
                 <div class="col-lg-9 col-md-8">
-                    <!-- File Upload Section -->
                     <div v-if="selectedAccount && selectedBucket" class="card card-custom mb-4">
                         <div class="card-body">
                             <FolderNavigation :current-path="currentPath" :selected-bucket="selectedBucket"
@@ -70,10 +69,10 @@
                                 Files
                                 <span class="badge bg-secondary ms-2">{{ currentItems.length }}</span>
                             </h5>
-                            <FileList :items="currentItems" :search-query="searchQuery" @file-rename="handleFileRename"
-                                @file-delete="handleFileDelete" 
-                                :current-path="currentPath" />
-                                />
+                            <FileList ref="fileList" :items="currentItems" :search-query="searchQuery"
+                                @file-rename="handleFileRename" @file-delete="handleFileDelete"
+                                :current-path="currentPath" :loading="loading" :is-truncated="isTruncated"
+                                @load-data="handleLoadData" @folder-double-click="handleFolderDoubleClick" />
                         </div>
                     </div>
                 </div>
@@ -107,10 +106,12 @@ export default {
             searchQuery: "",
             currentPath: '',
             nextContinuationToken: null,
+            isTruncated: false,
+            keyCount: 0,
             accounts: [],
             buckets: [],
-            files: [],
-            currentItems: []
+            currentItems: [],
+            loading: false
         };
     },
     mounted() {
@@ -126,13 +127,20 @@ export default {
                 { id: "bucket1", name: "uploaded-files", region: "us-east-1" },
             ];
         },
+        handleLoadData(params) {
+            this.loadFolderContents(params)
+        },
 
-        async loadFolderContents(path) {
+        async loadFolderContents(params = {}) {
             try {
+                this.loading = true;
+                const requestParams = {
+                    limit: params.limit || 10,
+                    continuationToken: params.continuationToken || '',
+                    folder: params.path
+                };
                 const response = await axios.get('http://localhost:3000/api/files/listByFolder', {
-                    params: {
-                        folder: path,
-                    }
+                    params: requestParams
                 })
                 if (!response.data || response.data.length === 0) {
                     this.currentItems = [];
@@ -140,30 +148,55 @@ export default {
                 }
 
                 this.currentItems = response.data.items;
+                this.isTruncated = response.data.isTruncated || false;
+                this.nextContinuationToken = response.data.nextContinuationToken || '';
+
+                // Update the FileList component with the new pagination token
+                if (this.$refs.fileList && this.nextContinuationToken) {
+                    this.$refs.fileList.updatePaginationToken(this.nextContinuationToken);
+                }
+
                 console.log("Loaded folder contents:", this.currentItems);
 
             } catch (error) {
                 console.error('Error loading folder contents:', error)
                 this.currentItems = []
+            } finally {
+                this.loading = false;
             }
         },
 
-        async loadFiles() {
+        async handleFileUpload(uploadedFiles) {
             try {
-                const res = await axios.get("http://localhost:3000/api/files/", {
-                    params: {
-                        limit: 10,
-                        continuationToken: this.nextContinuationToken,
-                    },
+
+                this.loading = true;
+                const formData = new FormData();
+
+                // Append files (works for single or multiple)
+                Array.from(uploadedFiles).forEach(file => {
+                    formData.append('files', file);
                 });
-                if (res.data.files.files.length > 0) {
-                    this.files = res.data.files.files;
-                }
-                console.log(this.files[1]);
+
+                const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
+                formData.append('key', uploadPath)
+                console.log("Uploading files to path:", uploadPath);
+                await axios.post(`http://localhost:3000/api/files/upload`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+
+                });
+
+                // Reload the current folder contents after upload
+                this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
-                alert("Error loading files for the selected bucket.");
+                console.error('Error uploading files:', error);
+            } finally {
+                this.loading = false;
             }
+
         },
+
         handleAccountChange(accountId) {
             this.selectedAccount = accountId;
             this.buckets = [];
@@ -176,7 +209,7 @@ export default {
             this.selectedBucket = bucketId;
             this.currentPath = ''
             if (bucketId) {
-                this.loadFolderContents('')
+                this.loadFolderContents({ limit: 10, continuationToken: this.nextContinuationToken, folder: this.currentPath })
             } else {
                 this.currentItems = []
             }
@@ -184,78 +217,8 @@ export default {
 
         handlePathChange(newPath) {
             this.currentPath = newPath
-            this.loadFolderContents(newPath)
-        },
-
-
-        async handleFileUpload(uploadedFiles) {
-            if (!this.selectedAccount || !this.selectedBucket) return;
-            for (const file of Array.from(uploadedFiles)) {
-                try {
-                    const fileData = {
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                        name: file.name,
-                        size: file.size,
-                        lastModified: new Date().toISOString(),
-                        type: this.getFileType(file),
-                        bucketId: this.selectedBucket,
-                        accountId: this.selectedAccount,
-                    };
-                    console.log("Uploading file:", fileData);
-                    await axios.post("http://localhost:3001/files", fileData, {
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    });
-                } catch (error) {
-                    alert("Error uploading file.");
-                }
-            }
-            // Reload files after upload
-            await this.loadFiles(this.selectedBucket, this.selectedAccount);
-        },
-        // Add this helper method
-        getFileType(file) {
-            const mimeType = file.type;
-            const extension = file.name.split(".").pop()?.toLowerCase();
-
-            // Handle by MIME type first
-            if (mimeType.startsWith("image/")) return "image";
-            if (mimeType.startsWith("video/")) return "video";
-            if (mimeType.startsWith("audio/")) return "audio";
-
-            // Handle specific types
-            if (mimeType === "application/pdf") return "pdf";
-            if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
-                return "excel";
-            if (mimeType.includes("word") || mimeType.includes("document"))
-                return "word";
-            if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
-                return "powerpoint";
-
-            // Fallback to extension
-            if (extension) {
-                switch (extension) {
-                    case "pdf":
-                        return "pdf";
-                    case "csv":
-                        return "csv";
-                    case "zip":
-                    case "rar":
-                    case "7z":
-                        return "archive";
-                    case "js":
-                    case "ts":
-                    case "html":
-                    case "css":
-                    case "json":
-                        return "code";
-                    default:
-                        return extension;
-                }
-            }
-
-            return "unknown";
+            console.log("new path", this.currentPath)
+            this.loadFolderContents({ path: this.currentPath })
         },
 
         async handleFileRename(fileId, newName) {
@@ -279,6 +242,20 @@ export default {
             }
         },
 
+        //handle folder double click to navigate
+        handleFolderDoubleClick(folderName) {
+            if (folderName === '/') {
+                this.currentPath = '/';
+            } else if (this.currentPath === '') {
+                this.currentPath = folderName;
+            } else if (this.currentPath.endsWith('/')) {
+                this.currentPath += folderName;
+            } else {
+                this.currentPath += `/${folderName}`;
+            }
+            this.loadFolderContents({ path: this.currentPath, limit: 10 });
+
+        },
         handleSearch(query) {
             this.searchQuery = query;
         },

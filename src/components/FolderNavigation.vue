@@ -53,28 +53,71 @@ export default {
     emits: ['pathChange'],
     computed: {
         // Generate breadcrumb items from current path
+        // breadcrumbItems() {
+        //     if (!this.currentPath) {
+        //         return [{ name: 'Root', path: '' }]
+        //     }
+
+        //     //const pathParts = this.currentPath.split('/')
+        //     const pathParts = this.currentPath.split('/').filter(part => part !== '')
+        //     const items = [{ name: 'Root', path: '' }]
+
+        //     let currentPath = ''
+        //     pathParts.forEach(part => {
+        //         currentPath = currentPath ? `${currentPath}/${part}` : part
+        //         items.push({
+        //             name: part,
+        //             path: currentPath
+        //         })
+        //     })
+
+        //     return items
+        // }
+        // Generate breadcrumb items from current path
         breadcrumbItems() {
             if (!this.currentPath) {
                 return [{ name: 'Root', path: '' }]
             }
 
-            const pathParts = this.currentPath.split('/')
             const items = [{ name: 'Root', path: '' }]
 
-            let currentPath = ''
-            pathParts.forEach(part => {
-                currentPath = currentPath ? `${currentPath}/${part}` : part
-                items.push({
-                    name: part,
-                    path: currentPath
+            // Special handling for paths starting with the "/" folder
+            if (this.currentPath.startsWith('/')) {
+                // Add the "/" folder as the first item after Root
+                items.push({ name: '/', path: '/' })
+
+                // Process remaining path parts if any
+                const remainingPath = this.currentPath.substring(1)
+                if (remainingPath) {
+                    let currentPath = '/'
+                    const parts = remainingPath.split('/').filter(p => p)
+
+                    parts.forEach(part => {
+                        currentPath = `${currentPath}${part}/`
+                        items.push({
+                            name: part,
+                            path: currentPath
+                        })
+                    })
+                }
+            } else {
+                // Normal path processing for non-root paths
+                let currentPath = ''
+                this.currentPath.split('/').filter(p => p).forEach(part => {
+                    currentPath = currentPath ? `${currentPath}/${part}` : part
+                    items.push({
+                        name: part,
+                        path: currentPath
+                    })
                 })
-            })
+            }
 
             return items
         }
     },
     methods: {
         navigateToPath(path) {
+            console.log("path clicked", path)
             this.$emit('pathChange', path)
         }
     }
