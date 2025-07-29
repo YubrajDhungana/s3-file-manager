@@ -35,9 +35,9 @@
                             </div>
 
                             <!-- Search Filter -->
-                            <div class="mb-3">
-                                <SearchFilter :search-query="searchQuery" @search="handleSearch" />
-                            </div>
+                            <!-- <div class="mb-3">
+                                <SearchFilter :disabled="!selectedBucket || !selectedAccount" @search="handleSearch" />
+                            </div> -->
                         </div>
                     </div>
                 </div>
@@ -50,6 +50,22 @@
                                 @path-change="handlePathChange" />
                         </div>
                     </div>
+
+                    <!-- File List -->
+                    <div class="card card-custom">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">
+                                <i class="fas fa-folder me-2"></i>
+                                Files
+                                <span class="badge bg-secondary ms-2">{{ currentItems.length }}</span>
+                            </h5>
+                            <FileList ref="fileList" :items="currentItems" @file-rename="handleFileRename"
+                                @file-delete="handleFileDelete" :current-path="currentPath" :loading="loading"
+                                :is-truncated="isTruncated" @load-data="handleLoadData"
+                                @folder-double-click="handleFolderDoubleClick" @bulk-delete="handleBulkDelete" />
+                        </div>
+                    </div>
+
                     <div class="card card-custom mb-4">
                         <div class="card-body">
                             <h5 class="card-title mb-3">
@@ -61,20 +77,7 @@
                         </div>
                     </div>
 
-                    <!-- File List -->
-                    <div class="card card-custom">
-                        <div class="card-body">
-                            <h5 class="card-title mb-3">
-                                <i class="fas fa-folder me-2"></i>
-                                Files
-                                <span class="badge bg-secondary ms-2">{{ currentItems.length }}</span>
-                            </h5>
-                            <FileList ref="fileList" :items="currentItems" :search-query="searchQuery"
-                                @file-rename="handleFileRename" @file-delete="handleFileDelete"
-                                :current-path="currentPath" :loading="loading" :is-truncated="isTruncated"
-                                @load-data="handleLoadData" @folder-double-click="handleFolderDoubleClick" />
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </div>
@@ -85,7 +88,7 @@ import AccountSelector from "./components/AccountSelector.vue";
 import BucketSelector from "./components/BucketSelector.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FileList from "./components/FileList.vue";
-import SearchFilter from "./components/SearchFilter.vue";
+//import SearchFilter from "./components/SearchFilter.vue";
 import FolderNavigation from "./components/FolderNavigation.vue";
 import axios from "axios";
 
@@ -96,22 +99,23 @@ export default {
         BucketSelector,
         FileUpload,
         FileList,
-        SearchFilter,
+        //SearchFilter,
         FolderNavigation
     },
     data() {
         return {
             selectedAccount: "",
             selectedBucket: "",
-            searchQuery: "",
             currentPath: '',
+            searchQuery: '',
             nextContinuationToken: null,
             isTruncated: false,
             keyCount: 0,
             accounts: [],
             buckets: [],
             currentItems: [],
-            loading: false
+            loading: false,
+            perPage: 10
         };
     },
     mounted() {
@@ -128,22 +132,26 @@ export default {
             ];
         },
         handleLoadData(params) {
-            this.loadFolderContents(params)
+            this.perPage = params.limit;
+            this.loadFolderContents(params);
         },
 
         async loadFolderContents(params = {}) {
             try {
                 this.loading = true;
                 const requestParams = {
-                    limit: params.limit || 10,
+                    limit: this.perPage,
                     continuationToken: params.continuationToken || '',
-                    folder: params.path
+                    folder: params.path || params.searchQuery
                 };
                 const response = await axios.get('http://localhost:3000/api/files/listByFolder', {
                     params: requestParams
                 })
-                if (!response.data || response.data.length === 0) {
+                if (!response.data || response.data.items?.length === 0) {
                     this.currentItems = [];
+                    if (params.searchQuery && (!response.data || response.data.items.length === 0)) {
+                        this.currentPath = "";
+                    }
                     return;
                 }
 
@@ -161,6 +169,9 @@ export default {
             } catch (error) {
                 console.error('Error loading folder contents:', error)
                 this.currentItems = []
+                if (params.searchQuery) {
+                    this.currentPath = "";
+                }
             } finally {
                 this.loading = false;
             }
@@ -204,7 +215,6 @@ export default {
                 this.$refs.fileUpload.isUploading = false;
                 this.$refs.fileUpload.updateProgress(0);
             }
-
         },
 
         handleAccountChange(accountId) {
@@ -219,7 +229,7 @@ export default {
             this.selectedBucket = bucketId;
             this.currentPath = ''
             if (bucketId) {
-                this.loadFolderContents({ limit: 10, continuationToken: this.nextContinuationToken, folder: this.currentPath })
+                this.loadFolderContents({ continuationToken: this.nextContinuationToken, folder: this.currentPath })
             } else {
                 this.currentItems = []
             }
@@ -248,17 +258,38 @@ export default {
         async handleFileDelete(key) {
             try {
                 console.log("Deleting file:", key);
-                await axios.delete('http://localhost:3000/api/files/', {
+                const response = await axios.delete('http://localhost:3000/api/files/', {
                     data: {
                         filePaths: [key]
                     }
                 });
-                this.loadFolderContents({ path: this.currentPath });
+                if (response.status == 200) {
+                    this.loadFolderContents({ path: this.currentPath });
+                } else {
+                    alert("Error deleting file.");
+                }
             } catch (error) {
                 alert("Error deleting file.");
             }
         },
 
+        async handleBulkDelete(fileKeys) {
+            try {
+                console.log("deleting keys", fileKeys);
+                const response = await axios.delete('http://localhost:3000/api/files/', {
+                    data: {
+                        filePaths: fileKeys
+                    }
+                })
+                if (response.status == 200) {
+                    this.loadFolderContents({ path: this.currentPath });
+                } else {
+                    alert("Error deleting selected files.");
+                }
+            } catch (error) {
+                alert("Error deleting selected files.");
+            }
+        },
         //handle folder double click to navigate
         handleFolderDoubleClick(folderName) {
             if (folderName === '/') {
@@ -270,11 +301,22 @@ export default {
             } else {
                 this.currentPath += `/${folderName}`;
             }
-            this.loadFolderContents({ path: this.currentPath, limit: 10 });
+            this.loadFolderContents({ path: this.currentPath });
 
         },
-        handleSearch(query) {
-            this.searchQuery = query;
+        handleSearch(searchQuery) {
+            try {
+                this.currentPath = searchQuery;
+                if (!searchQuery.trim()) {
+                    this.loadFolderContents({ path: this.currentPath })
+                } else {
+                    this.loadFolderContents({ searchQuery: searchQuery });
+                }
+
+            } catch (error) {
+                console.error("Error loading folder contents:", error);
+                alert("Error loading folder contents.");
+            }
         },
     },
 };
@@ -290,11 +332,11 @@ export default {
     font-weight: 600;
 }
 
-.card-custom {
+/* .card-custom {
     border: none;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     border-radius: 0.5rem;
-}
+} */
 
 .card-title {
     color: #495057;

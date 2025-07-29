@@ -1,14 +1,32 @@
 <template>
     <div class="item-manager-container">
-        <!-- Bulk Actions Bar -->
-        <div v-if="selectedItems.length > 0" class="bulk-actions-bar mb-3 p-3 bg-light rounded">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-2">
+        <!-- Actions Bar (Search + Bulk Actions) -->
+        <div class="actions-bar mb-3 p-3 bg-light rounded">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <!-- Left side: Search -->
+                <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 300px;">
+                    <div class="search-container d-flex align-items-center gap-2" style="max-width: 400px;">
+                        <input type="text" v-model="searchInput" class="form-control form-control-sm"
+                            placeholder="Search files and folders..." @keyup.enter="performSearch"
+                            style="min-width: 200px;">
+                        <button class="btn btn-sm btn-outline-primary search-btn" type="button" @click="performSearch"
+                            :title="'Search'">
+                            <i class="fas fa-search"></i>
+                            Search
+                        </button>
+                        <button v-if="searchInput" class="btn btn-sm btn-outline-secondary clear-btn" type="button"
+                            @click="clearSearch" :title="'Clear search'">
+                            <i class="fas fa-times"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right side: Bulk Actions (only show when items are selected) -->
+                <div v-if="selectedItems.length > 0" class="d-flex align-items-center gap-2">
                     <span class="text-muted">
                         {{ selectedItems.length }} item(s) selected
                     </span>
-                </div>
-                <div>
                     <button class="btn btn-sm btn-danger" @click="confirmBulkDelete">
                         <i class="fas fa-trash me-1"></i>
                         Delete Selected
@@ -29,50 +47,48 @@
             </div>
 
             <div v-else-if="items.length > 0" class="table-wrapper">
-                <!-- Fixed Header -->
-                <div class="table-header-fixed">
-                    <table class="table table-header mb-0">
-                        <thead>
+                <!-- Scrollable Container for both header and body -->
+                <div class="table-scroll-container" ref="tableScrollContainer" @scroll="onTableScroll">
+                    <!-- Table with header and body together -->
+                    <table class="table table-hover mb-0">
+                        <!-- Fixed Header -->
+                        <thead class="table-header-sticky">
                             <tr>
-                                <th scope="col" style="width: 5%;">
+                                <th scope="col" class="col-checkbox">
                                     <input type="checkbox" :checked="allItemsSelected" @change="toggleSelectAll">
                                 </th>
-                                <th scope="col" style="width: 40%;">
+                                <th scope="col" class="col-name">
                                     <i class="fas fa-file me-2"></i>
                                     Name
                                 </th>
-                                <th scope="col" style="width: 20%;">
+                                <th scope="col" class="col-type">
                                     <i class="fas fa-tag me-2"></i>
                                     Type
                                 </th>
-                                <th scope="col" style="width: 15%;">
+                                <th scope="col" class="col-size">
                                     <i class="fas fa-weight me-2"></i>
                                     Size
                                 </th>
-                                <th scope="col" style="width: 20%;">
+                                <th scope="col" class="col-modified">
                                     <i class="fas fa-calendar me-2"></i>
                                     Last Modified
                                 </th>
-                                <th scope="col" style="width: 15%;" class="text-center">
+                                <th scope="col" class="col-actions text-center">
                                     <i class="fas fa-cogs me-2"></i>
                                     Actions
                                 </th>
                             </tr>
                         </thead>
-                    </table>
-                </div>
 
-                <!-- Scrollable Body -->
-                <div class="table-body-scrollable">
-                    <table class="table table-hover mb-0">
+                        <!-- Scrollable Body -->
                         <tbody>
                             <tr v-for="item in items" :key="item.key" @dblclick="handleItemDoubleClick(item)"
                                 :class="{ 'folder-row': item.type === 'folder', 'selected-row': isItemSelected(item) }">
-                                <td style="width: 5%;" class="align-middle">
+                                <td class="col-checkbox align-middle">
                                     <input type="checkbox" v-model="selectedItems" :value="item.key"
                                         :disabled="item.type === 'folder'">
                                 </td>
-                                <td style="width: 40%;" class="align-middle">
+                                <td class="col-name align-middle">
                                     <div class="d-flex align-items-center">
                                         <i :class="getItemIcon(item.type, item.type === 'folder', item.name)"
                                             class="item-icon"></i>
@@ -99,29 +115,26 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td style="width: 20%;" class="align-middle">
-
+                                <td class="col-type align-middle">
                                     <span class="badge"
                                         :class="item.type === 'folder' ? 'bg-warning text-dark' : 'bg-light text-dark'">
                                         {{ item.type === 'folder' ? 'Folder' :
                                             (getFileExtension(item.name)).toUpperCase() || 'FILE' }}
                                     </span>
                                 </td>
-                                <td style="width: 15%;" class="align-middle text-muted">
+                                <td class="col-size align-middle text-muted">
                                     <span v-if="item.size">
                                         {{ formatFileSize(item.size) }}
                                     </span>
                                     <span v-else>-</span>
-
                                 </td>
-                                <td style="width: 20%;" class="align-middle text-muted">
-                                    <!-- {{ formatDate(item.lastModified) }} -->
+                                <td class="col-modified align-middle text-muted">
                                     <span v-if="item.lastModified">
                                         {{ new Date(item.lastModified).toLocaleString() }}
                                     </span>
                                     <span v-else>-</span>
                                 </td>
-                                <td style="width: 15%;" class="align-middle text-center">
+                                <td class="col-actions align-middle text-center">
                                     <div v-if="item.type === 'folder'" class="text-muted">-</div>
                                     <div v-else class="action-buttons">
                                         <button v-if="editingFile !== item.key" type="button"
@@ -165,11 +178,9 @@
                                 <option :value="10">10</option>
                                 <option :value="20">20</option>
                                 <option :value="50">50</option>
+                                <option :value="100">100</option>
                             </select>
                         </div>
-                        <!-- <small class="text-muted">
-                            Page {{ currentPage }} of {{ totalPages }}
-                        </small> -->
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -195,6 +206,7 @@
         </div>
     </div>
 </template>
+
 <script>
 export default {
     name: 'FileList',
@@ -203,6 +215,16 @@ export default {
             type: Array,
             required: true,
             default: () => []
+        },
+        watch: {
+            searchQuery(newVal) {
+                // Sync the input with the prop when it changes externally
+                this.searchInput = newVal;
+            }
+        },
+        mounted() {
+            // Initialize search input with the prop value
+            this.searchInput = this.searchQuery;
         },
         searchQuery: {
             type: String,
@@ -222,7 +244,7 @@ export default {
         },
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'clearSearch'],
     data() {
         return {
             selectedItems: [],
@@ -231,6 +253,7 @@ export default {
             newKey: null,
             currentPage: 1,
             itemsPerPage: 10,
+            searchInput: '',
             //storing pagination token for navigation
             paginationTokens: [""],//first page always starts with null
             currentTokenIndex: 0
@@ -249,6 +272,15 @@ export default {
     },
 
     methods: {
+        performSearch() {
+            if (this.searchInput.trim()) {
+                this.$emit('search', this.searchInput.trim());
+            }
+        },
+        clearSearch() {
+            this.searchInput = '';
+            this.$emit('clearSearch');
+        },
         isItemSelected(item) {
             return this.selectedItems.includes(item.key);
         },
@@ -416,6 +448,13 @@ export default {
                 this.$emit('fileDelete', key)
             }
         },
+        confirmBulkDelete() {
+            if (this.selectedItems.length == 0) return;
+            if (confirm(`Are you sure you want to delete ${this.selectedItems.length} selected file(s)?`)) {
+                this.$emit('bulkDelete', this.selectedItems);
+                this.selectedItems = [];
+            }
+        },
         handleItemDoubleClick(item) {
             if (item.type === 'folder') {
                 this.$emit('folderDoubleClick', item.name)
@@ -425,8 +464,6 @@ export default {
     }
 }
 </script>
-
-
 
 <style scoped>
 .item-manager-container {
@@ -456,34 +493,66 @@ export default {
     position: relative;
 }
 
-.table-header-fixed {
+.table-scroll-container {
+    max-height: 400px;
+    overflow: auto;
+    position: relative;
+}
+
+.table {
+    margin-bottom: 0;
+    min-width: 800px;
+    /* Minimum width to enable horizontal scrolling */
+}
+
+.table-header-sticky {
     position: sticky;
     top: 0;
     z-index: 10;
-    background-color: #ffffff;
-    border-bottom: 2px solid #dee2e6;
+    background-color: #f8f9fa;
 }
 
-.table-header thead th {
+.table-header-sticky th {
     background-color: #f8f9fa;
-    border-bottom: none;
+    border-bottom: 2px solid #dee2e6;
     font-weight: 600;
     color: #495057;
     padding: 1rem;
     white-space: nowrap;
 }
 
-.table-body-scrollable {
-    max-height: 400px;
-    overflow-y: auto;
-    overflow-x: hidden;
+/* Column width definitions */
+.col-checkbox {
+    width: 50px;
+    min-width: 50px;
 }
 
-.table-body-scrollable .table {
-    margin-bottom: 0;
+.col-name {
+    width: 300px;
+    min-width: 200px;
 }
 
-.table-body-scrollable tbody tr:hover {
+.col-type {
+    width: 120px;
+    min-width: 100px;
+}
+
+.col-size {
+    width: 100px;
+    min-width: 80px;
+}
+
+.col-modified {
+    width: 180px;
+    min-width: 150px;
+}
+
+.col-actions {
+    width: 150px;
+    min-width: 120px;
+}
+
+.table tbody tr:hover {
     background-color: #f8f9fa;
 }
 
@@ -495,7 +564,7 @@ export default {
     background-color: #fff3cd !important;
 }
 
-.table-body-scrollable td {
+.table td {
     padding: 1rem;
     vertical-align: middle;
     border-top: 1px solid #dee2e6;
@@ -540,26 +609,60 @@ export default {
     font-size: 0.75rem;
 }
 
-/* Custom scrollbar for webkit browsers */
-.table-body-scrollable::-webkit-scrollbar {
-    width: 8px;
+/* Custom button styling for search area */
+.search-btn,
+.clear-btn {
+    min-width: 80px;
+    white-space: nowrap;
 }
 
-.table-body-scrollable::-webkit-scrollbar-track {
+.search-container {
+    width: 100%;
+}
+
+/* Custom scrollbar for webkit browsers */
+.table-scroll-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
 }
 
-.table-body-scrollable::-webkit-scrollbar-thumb {
+.table-scroll-container::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 4px;
 }
 
-.table-body-scrollable::-webkit-scrollbar-thumb:hover {
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
 
+.table-scroll-container::-webkit-scrollbar-corner {
+    background: #f1f1f1;
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
+    .table {
+        min-width: 600px;
+        /* Smaller minimum width on mobile */
+    }
+
+    .col-name {
+        min-width: 150px;
+    }
+
+    .col-modified {
+        min-width: 120px;
+    }
+
+    .col-actions {
+        min-width: 100px;
+    }
+
     .action-buttons {
         flex-direction: column;
         gap: 0.25rem;
@@ -571,7 +674,7 @@ export default {
         margin-right: 4px;
     }
 
-    .table-body-scrollable {
+    .table-scroll-container {
         max-height: 300px;
     }
 
@@ -583,6 +686,17 @@ export default {
         justify-content: center;
         flex-wrap: wrap;
         gap: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .table {
+        min-width: 500px;
+    }
+
+    .table td,
+    .table th {
+        padding: 0.5rem;
     }
 }
 </style>

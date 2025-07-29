@@ -5,50 +5,50 @@
             Search Files
         </label>
         <div class="search-container">
+
             <i class="fas fa-search search-icon"></i>
             <input type="text" class="form-control search-input" placeholder="Search by filename..."
-                v-model="localQuery" />
-            <button v-if="localQuery" type="button" class="btn btn-sm btn-outline-secondary position-absolute"
-                style="right: 8px; top: 50%; transform: translateY(-50%);" @click="clearSearch">
+                v-model="inputQuery" @keyup="handleKeyup" :disabled="disabled" />
+            <button type="button" class="btn btn-primary search-button" @click="performSearch" title="Search files"
+                :disabled="disabled">
+                <i class="fas fa-search"></i>
+            </button>
+            <button v-if="inputQuery" type="button" class="btn btn-sm btn-outline-secondary clear-button"
+                @click="clearSearch" title="Clear search" :disabled="disabled">
                 <i class="fas fa-times"></i>
             </button>
-        </div>
-        <div v-if="localQuery" class="mt-2">
-            <small class="text-muted">
-                <i class="fas fa-filter me-1"></i>
-                Filtering by: "{{ localQuery }}"
-            </small>
+
+
         </div>
     </div>
 </template>
 <script>
 export default {
     name: 'SearchFilter',
+    emits: ['search'],
     props: {
-        searchQuery: {
-            type: String,
-            default: ''
+        disabled: {
+            type: Boolean,
+            default: false
         }
     },
-    emits: ['search'],
     data() {
         return {
-            localQuery: this.searchQuery
-        }
-    },
-    watch: {
-        // Watch for external changes to searchQuery
-        searchQuery(newQuery) {
-            this.localQuery = newQuery;
-        },
-        // Emit search events
-        localQuery(newQuery) {
-            this.$emit('search', newQuery)
+            inputQuery: ''
         }
     },
     methods: {
+        performSearch() {
+            this.$emit('search', this.inputQuery.trim())
+        },
+        handleKeyup(event) {
+            if (event.key === 'Enter') {
+                this.performSearch()
+            }
+        },
         clearSearch() {
-            this.localQuery = ''
+            this.inputQuery = ''
+            this.$emit('search', '')
         }
     }
 }
@@ -56,6 +56,8 @@ export default {
 <style scoped>
 .search-container {
     position: relative;
+    display: flex;
+    gap: 0.5rem;
 }
 
 .search-icon {
@@ -68,7 +70,21 @@ export default {
 }
 
 .search-input {
+    flex: 1;
     padding-left: 2.5rem;
-    padding-right: 2.5rem;
+}
+
+.search-button {
+    padding: 0.375rem 0.75rem;
+    white-space: nowrap;
+}
+
+.clear-button {
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.25rem 0.5rem;
+    z-index: 3;
 }
 </style>

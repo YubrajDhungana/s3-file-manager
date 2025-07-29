@@ -53,27 +53,6 @@ export default {
     emits: ['pathChange'],
     computed: {
         // Generate breadcrumb items from current path
-        // breadcrumbItems() {
-        //     if (!this.currentPath) {
-        //         return [{ name: 'Root', path: '' }]
-        //     }
-
-        //     //const pathParts = this.currentPath.split('/')
-        //     const pathParts = this.currentPath.split('/').filter(part => part !== '')
-        //     const items = [{ name: 'Root', path: '' }]
-
-        //     let currentPath = ''
-        //     pathParts.forEach(part => {
-        //         currentPath = currentPath ? `${currentPath}/${part}` : part
-        //         items.push({
-        //             name: part,
-        //             path: currentPath
-        //         })
-        //     })
-
-        //     return items
-        // }
-        // Generate breadcrumb items from current path
         breadcrumbItems() {
             if (!this.currentPath) {
                 return [{ name: 'Root', path: '' }]
