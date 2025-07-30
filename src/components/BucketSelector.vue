@@ -6,8 +6,8 @@
         </label>
         <div ref="dropdownRef" class="dropdown" :class="{ show: isDropdownOpen }">
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" @click="toggleDropdown"
-                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="!selectedAccount"
-                :class="{ 'btn-outline-primary': selectedBucket }" :aria-expanded="isDropdownOpen" aria-haspopup="true">
+                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="!selectedAccount || loading"
+                :class="{ 'btn-outline-primary': selectedBucket }" :aria-expanded="isDropdownOpen" aria-haspopup="true" >
                 {{ selectedBucketName || 'Select Bucket' }}
             </button>
             <ul class="dropdown-menu w-100" :class="{ show: isDropdownOpen }" role="menu">
@@ -23,8 +23,7 @@
                         :class="{ 'active': selectedBucket === bucket.id }" role="menuitem"
                         :tabindex="isDropdownOpen ? 0 : -1">
                         <div>
-                            <div class="fw-medium">{{ bucket.name }}</div>
-                            <small class="text-muted">{{ bucket.itemCount }} items</small>
+                            <div class="fw-medium">{{ bucket.bucket_name }}</div>
                         </div>
                         <i v-if="selectedBucket === bucket.id" class="fas fa-check text-primary"></i>
                     </button>
@@ -49,12 +48,16 @@ export default {
         buckets: {
             type: Array,
             default: () => []
+        },
+        loading:{
+            type: Boolean,
+            default:false
         }
     },
     computed: {
         selectedBucketName() {
             const bucket = this.buckets.find(b => b.id === this.selectedBucket);
-            return bucket ? bucket.name : '';
+            return bucket ? bucket.bucket_name : '';
         }
     },
     data() {

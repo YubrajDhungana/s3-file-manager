@@ -8,14 +8,14 @@
                     <div class="search-container d-flex align-items-center gap-2" style="max-width: 400px;">
                         <input type="text" v-model="searchInput" class="form-control form-control-sm"
                             placeholder="Search files and folders..." @keyup.enter="performSearch"
-                            style="min-width: 200px;">
+                            style="min-width: 200px;" :disabled="disabled">
                         <button class="btn btn-sm btn-outline-primary search-btn" type="button" @click="performSearch"
-                            :title="'Search'">
+                            :title="'Search'" :disabled="disabled">
                             <i class="fas fa-search"></i>
                             Search
                         </button>
                         <button v-if="searchInput" class="btn btn-sm btn-outline-secondary clear-btn" type="button"
-                            @click="clearSearch" :title="'Clear search'">
+                            @click="clearSearch" :title="'Clear search'" :disabled="disabled">
                             <i class="fas fa-times"></i>
                             Clear
                         </button>
@@ -174,7 +174,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 text-nowrap">Rows per page:</label>
                             <select v-model="itemsPerPage" @change="changeItemsPerPage"
-                                class="form-select form-select-sm" style="width: auto;">
+                                class="form-select form-select-sm" style="width: auto;" :disabled="searchInput!=''">
                                 <option :value="10">10</option>
                                 <option :value="20">20</option>
                                 <option :value="50">50</option>
@@ -216,20 +216,6 @@ export default {
             required: true,
             default: () => []
         },
-        watch: {
-            searchQuery(newVal) {
-                // Sync the input with the prop when it changes externally
-                this.searchInput = newVal;
-            }
-        },
-        mounted() {
-            // Initialize search input with the prop value
-            this.searchInput = this.searchQuery;
-        },
-        searchQuery: {
-            type: String,
-            default: ''
-        },
         currentPath: {
             type: String,
             default: ''
@@ -242,9 +228,13 @@ export default {
             type: Boolean,
             default: false
         },
+        disabled: {
+            type: Boolean,
+            default: false
+        }
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'clearSearch'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search'],
     data() {
         return {
             selectedItems: [],
@@ -279,7 +269,7 @@ export default {
         },
         clearSearch() {
             this.searchInput = '';
-            this.$emit('clearSearch');
+            this.$emit('search','');
         },
         isItemSelected(item) {
             return this.selectedItems.includes(item.key);

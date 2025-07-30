@@ -31,7 +31,7 @@
                             <!-- Bucket Selector -->
                             <div class="mb-3">
                                 <BucketSelector :selected-bucket="selectedBucket" :selected-account="selectedAccount"
-                                    @bucket-change="handleBucketChange" :buckets="buckets" />
+                                    @bucket-change="handleBucketChange" :buckets="buckets" :loading="loadingBuckets" />
                             </div>
 
                             <!-- Search Filter -->
@@ -62,7 +62,8 @@
                             <FileList ref="fileList" :items="currentItems" @file-rename="handleFileRename"
                                 @file-delete="handleFileDelete" :current-path="currentPath" :loading="loading"
                                 :is-truncated="isTruncated" @load-data="handleLoadData"
-                                @folder-double-click="handleFolderDoubleClick" @bulk-delete="handleBulkDelete" />
+                                @folder-double-click="handleFolderDoubleClick" @bulk-delete="handleBulkDelete"
+                                :disabled="!selectedBucket || !selectedAccount" @search="handleSearch" />
                         </div>
                     </div>
 
@@ -115,7 +116,8 @@ export default {
             buckets: [],
             currentItems: [],
             loading: false,
-            perPage: 10
+            perPage: 10,
+            loadingBuckets: false
         };
     },
     mounted() {
@@ -127,24 +129,66 @@ export default {
         },
 
         async loadBuckets() {
-            this.buckets = [
-                { id: "bucket1", name: "uploaded-files", region: "us-east-1" },
-            ];
+            // this.buckets = [
+            //     { id: "bucket1", name: "uploaded-files", region: "us-east-1" },
+            // ];
+            try {
+                this.loadingBuckets = true;
+                const response = await axios.get('http://localhost:3000/api/buckets/list-buckets');
+                this.buckets = response.data || [];
+            } catch (error) {
+                console.error("Error loading buckets:", error);
+                alert("Error loading buckets.");
+            } finally {
+                this.loadingBuckets = false;
+            }
         },
         handleLoadData(params) {
             this.perPage = params.limit;
             this.loadFolderContents(params);
         },
 
+        async handleSearch(searchQuery) {
+            try {
+                this.loading = true;
+                const id = this.selectedBucket;
+                if (!searchQuery.trim()) {
+                    this.loadFolderContents({ path: this.currentPath })
+                } else {
+                    const response = await axios.get(`http://localhost:3000/api/files/${id}/search-files`, {
+                        params: {
+                            folder: this.currentPath,
+                            search: searchQuery
+                        }
+                    })
+                    if (!response.data || response.data.items?.length === 0) {
+                        this.currentPath = '';
+                        return;
+                    }
+                    this.currentItems = response.data.items;
+                    this.isTruncated = response.data.isTruncated;
+                    this.nextContinuationToken = response.data.continuationToken || '';
+                    console.log("current path", this.currentPath);
+                    console.log("Loaded folder contents:", this.currentItems);
+                }
+            } catch (error) {
+                console.error("Error loading folder contents:", error);
+                alert("Error loading folder contents.");
+            } finally {
+                this.loading = false;
+            }
+        },
+
         async loadFolderContents(params = {}) {
             try {
                 this.loading = true;
+                const id = this.selectedBucket;
                 const requestParams = {
                     limit: this.perPage,
                     continuationToken: params.continuationToken || '',
                     folder: params.path || params.searchQuery
                 };
-                const response = await axios.get('http://localhost:3000/api/files/listByFolder', {
+                const response = await axios.get(`http://localhost:3000/api/files/${id}/listByFolder`, {
                     params: requestParams
                 })
                 if (!response.data || response.data.items?.length === 0) {
@@ -163,9 +207,6 @@ export default {
                 if (this.$refs.fileList && this.nextContinuationToken) {
                     this.$refs.fileList.updatePaginationToken(this.nextContinuationToken);
                 }
-
-                console.log("Loaded folder contents:", this.currentItems);
-
             } catch (error) {
                 console.error('Error loading folder contents:', error)
                 this.currentItems = []
@@ -243,7 +284,8 @@ export default {
 
         async handleFileRename(oldKey, newKey) {
             try {
-                await axios.patch('http://localhost:3000/api/files/rename', {
+                const id =this.selectedBucket;
+                await axios.patch(`http://localhost:3000/api/files/${id}/rename`, {
                     oldKey: oldKey,
                     newKey: newKey,
 
@@ -257,8 +299,8 @@ export default {
 
         async handleFileDelete(key) {
             try {
-                console.log("Deleting file:", key);
-                const response = await axios.delete('http://localhost:3000/api/files/', {
+                const id = this.selectedBucket;
+                const response = await axios.delete(`http://localhost:3000/api/files/${id}`, {
                     data: {
                         filePaths: [key]
                     }
@@ -275,8 +317,8 @@ export default {
 
         async handleBulkDelete(fileKeys) {
             try {
-                console.log("deleting keys", fileKeys);
-                const response = await axios.delete('http://localhost:3000/api/files/', {
+                const id = this.selectedBucket;
+                const response = await axios.delete(`http://localhost:3000/api/files/${id}`, {
                     data: {
                         filePaths: fileKeys
                     }
@@ -304,20 +346,7 @@ export default {
             this.loadFolderContents({ path: this.currentPath });
 
         },
-        handleSearch(searchQuery) {
-            try {
-                this.currentPath = searchQuery;
-                if (!searchQuery.trim()) {
-                    this.loadFolderContents({ path: this.currentPath })
-                } else {
-                    this.loadFolderContents({ searchQuery: searchQuery });
-                }
 
-            } catch (error) {
-                console.error("Error loading folder contents:", error);
-                alert("Error loading folder contents.");
-            }
-        },
     },
 };
 </script>
