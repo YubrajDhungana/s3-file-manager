@@ -7,7 +7,7 @@
                 <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 300px;">
                     <div class="search-container d-flex align-items-center gap-2" style="max-width: 400px;">
                         <input type="text" v-model="searchInput" class="form-control form-control-sm"
-                            placeholder="Search files and folders..." @keyup.enter="performSearch"
+                            placeholder="Search files..." @keyup.enter="performSearch"
                             style="min-width: 200px;" :disabled="disabled">
                         <button class="btn btn-sm btn-outline-primary search-btn" type="button" @click="performSearch"
                             :title="'Search'" :disabled="disabled">

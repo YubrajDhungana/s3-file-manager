@@ -129,9 +129,6 @@ export default {
         },
 
         async loadBuckets() {
-            // this.buckets = [
-            //     { id: "bucket1", name: "uploaded-files", region: "us-east-1" },
-            // ];
             try {
                 this.loadingBuckets = true;
                 const response = await axios.get('http://localhost:3000/api/buckets/list-buckets');
@@ -227,11 +224,12 @@ export default {
                 Array.from(uploadedFiles).forEach(file => {
                     formData.append('files', file);
                 });
-
+                const id = this.selectedBucket;
                 const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
+                console.log("path", uploadPath);
                 formData.append('key', uploadPath)
                 console.log("Uploading files to path:", uploadPath);
-                await axios.post(`http://localhost:3000/api/files/upload`, formData, {
+                await axios.post(`http://localhost:3000/api/files/${id}/upload`, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     },
@@ -284,7 +282,7 @@ export default {
 
         async handleFileRename(oldKey, newKey) {
             try {
-                const id =this.selectedBucket;
+                const id = this.selectedBucket;
                 await axios.patch(`http://localhost:3000/api/files/${id}/rename`, {
                     oldKey: oldKey,
                     newKey: newKey,
