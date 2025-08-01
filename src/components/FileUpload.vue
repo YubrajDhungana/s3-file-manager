@@ -49,7 +49,9 @@ export default {
         return {
             isDragOver: false,
             isUploading: false,
-            uploadProgress: 0
+            uploadProgress: 0,
+            currentFile: 0,
+            totalFiles: 0
         }
     },
     methods: {
@@ -81,8 +83,19 @@ export default {
                 this.$emit('fileUpload', target.files)
             }
         },
-        updateProgress(progress) {
-            this.uploadProgress = progress
+        updateProgress(progress, currentFile, totalFiles) {
+            if (totalFiles > 1) {
+                const fileProgress = progress / totalFiles;
+                const previousFileProgress = (currentFile - 1) / totalFiles * 100;
+                this.uploadProgress = previousFileProgress + fileProgress;
+            } else {
+                this.uploadProgress = progress
+            }
+        },
+        resetProgress() {
+            this.uploadProgress = 0;
+            this.currentFile = 0;
+            this.totalFiles = 0;
         },
         triggerFileInput() {
             if (!this.disabled) {

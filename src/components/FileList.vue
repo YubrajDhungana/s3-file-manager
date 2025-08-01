@@ -254,7 +254,7 @@ export default {
             return this.currentTokenIndex > 0;
         },
         allItemsSelected() {
-            // Only consider files (not folders) for select all
+            // Only select  files (not folders) for select all
             const selectableItems = this.items.filter(item => item.type !== 'folder');
             return selectableItems.length > 0 &&
                 this.selectedItems.length === selectableItems.length;
