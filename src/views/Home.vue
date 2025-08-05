@@ -84,7 +84,7 @@
                             <h5 class="card-title mb-3">
                                 <i class="fas fa-folder me-2"></i>
                                 Files
-                                <span class="badge bg-secondary ms-2">{{ currentItems.length }}</span>
+                                <span class="badge bg-secondary ms-2">{{ currentItems?.length }}</span>
                             </h5>
                             <FileList ref="fileList" :items="currentItems" @file-rename="handleFileRename"
                                 @file-delete="handleFileDelete" :current-path="currentPath" :loading="loading"
@@ -118,7 +118,7 @@ import FileUpload from "../components/FileUpload.vue";
 import FileList from "../components/FileList.vue";
 //import SearchFilter from "../components/SearchFilter.vue";
 import FolderNavigation from "../components/FolderNavigation.vue";
-import axios from "axios";
+import api from '../utils/api'
 
 export default {
     name: "HomePage",
@@ -146,32 +146,70 @@ export default {
             perPage: 10,
             loadingBuckets: false,
             currentUser: {
-                name: 'yubraj dhungana',
-                email: 'yubi@gmail.com'
+                name: '',
+                email: ''
             },
         };
     },
     mounted() {
         this.loadAccounts();
+        this.authStatus();
     },
     methods: {
+
+        async authStatus() {
+            console.log(" the auth status method is called")
+            try {
+                const response = await api.get('/auth/check-auth');
+                if (response.data.authenticated) {
+                    this.currentUser = {
+                        name: response.data.user.name || '',
+                        email: response.data.user.email | ''
+                    }
+                }
+                console.log("current user: ", this.currentUser);
+            } catch (error) {
+                if (error.response?.status === 401) {
+                    this.handleLogout(); // Force logout if token is invalid
+                }
+            }
+        },
+
         async loadAccounts() {
             this.accounts = [{ id: "acc1", name: "Account 1", region: "us-east-1" }];
         },
-        handleLogout() {
+        async handleLogout() {
             if (confirm('Are you sure you want to logout?')) {
-                console.log('logged out');
+                await api.post('/auth/logout')
+                    .finally(() => {
+                        this.$router.push({ name: 'Login' });
+                    })
             }
         },
 
         async loadBuckets() {
             try {
                 this.loadingBuckets = true;
-                const response = await axios.get('http://localhost:3000/api/buckets/list-buckets');
+                // Debug: Check what cookies exist
+                console.log('Document cookies:', document.cookie);
+                const response = await api.get('/buckets/list-buckets', {
+                    headers: {
+                        "authorization": `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
                 this.buckets = response.data || [];
             } catch (error) {
-                console.error("Error loading buckets:", error);
-                alert("Error loading buckets.");
+                if (error.response?.data?.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    console.error("Error loading buckets:", error);
+                    alert("Error loading buckets. Please try again.");
+                }
+                this.buckets = [];
+
             } finally {
                 this.loadingBuckets = false;
             }
@@ -190,10 +228,13 @@ export default {
                     this.loadFolderContents({ path: this.currentPath })
                 } else {
                     this.loading = true;
-                    const response = await axios.get(`http://localhost:3000/api/files/${id}/search-files`, {
+                    const response = await api.get(`/files/${id}/search-files`, {
                         params: {
                             folder: this.currentPath,
                             search: searchQuery
+                        },
+                        headers: {
+                            "authorization": `Bearer ${localStorage.getItem('token')}`
                         }
                     })
                     if (!response.data || response.data.items?.length === 0) {
@@ -207,8 +248,16 @@ export default {
                     console.log("Loaded folder contents:", this.currentItems);
                 }
             } catch (error) {
-                console.error("Error loading folder contents:", error);
-                alert("Error loading folder contents.");
+                if (error.response.data.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    console.error("Error loading folder contents:", error);
+                    alert("Error loading folder contents.");
+                }
+
             } finally {
                 if (searchQuery.trim() !== '') {
                     this.loading = false;
@@ -225,8 +274,11 @@ export default {
                     continuationToken: params.continuationToken || '',
                     folder: params.path || params.searchQuery
                 };
-                const response = await axios.get(`http://localhost:3000/api/files/${id}/listByFolder`, {
-                    params: requestParams
+                const response = await api.get(`/files/${id}/listByFolder`, {
+                    params: requestParams,
+                    headers: {
+                        "authorization": `Bearer ${localStorage.getItem('token')}`
+                    }
                 })
                 if (!response.data || response.data.items?.length === 0) {
                     this.currentItems = [];
@@ -246,7 +298,12 @@ export default {
                     this.$refs.fileList.updatePaginationToken(this.nextContinuationToken);
                 }
             } catch (error) {
-                console.error('Error loading folder contents:', error)
+                if (error.response.data.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                }
                 this.currentItems = []
                 if (params.searchQuery) {
                     this.currentPath = "";
@@ -271,9 +328,10 @@ export default {
                 const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
                 formData.append('key', uploadPath)
                 console.log("Uploading files to path:", uploadPath);
-                await axios.post(`http://localhost:3000/api/files/${id}/upload`, formData, {
+                await api.post(`/files/${id}/upload`, formData, {
                     headers: {
-                        'Content-Type': 'multipart/form-data'
+                        'Content-Type': 'multipart/form-data',
+                        "authorization": `Bearer ${localStorage.getItem('token')}`
                     },
                     onUploadProgress: (progressEvent) => {
                         if (progressEvent.total) {
@@ -293,8 +351,16 @@ export default {
                 // Reload the current folder contents after upload
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
-                console.error('Error uploading files:', error);
-                alert("Error uploading files. Please try again.");
+                if (error.response.data.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    console.error('Error uploading files:', error);
+                    alert("Error uploading files. Please try again.");
+                }
+
             } finally {
                 this.$refs.fileUpload.isUploading = false;
                 this.$refs.fileUpload.resetProgress();
@@ -328,51 +394,84 @@ export default {
         async handleFileRename(oldKey, newKey) {
             try {
                 const id = this.selectedBucket;
-                await axios.patch(`http://localhost:3000/api/files/${id}/rename`, {
+                await api.patch(`/files/${id}/rename`, {
                     oldKey: oldKey,
                     newKey: newKey,
-
+                    headers: {
+                        "authorization": `Bearer ${localStorage.getItem('token')}`
+                    }
                 });
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
-                console.log("Error renaming file:", error);
-                alert("Error renaming file.");
+                if (error.response.data.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                } else {
+
+
+                    console.log("Error renaming file:", error);
+                    alert("Error renaming file.");
+                }
             }
         },
 
         async handleFileDelete(key) {
             try {
                 const id = this.selectedBucket;
-                const response = await axios.delete(`http://localhost:3000/api/files/${id}`, {
+                const response = await api.delete(`/files/${id}`, {
                     data: {
                         filePaths: [key]
+                    },
+                    headers: {
+                        "authorization": `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-                if (response.status == 200) {
+                if (response.data.message === "Files deleted successfully") {
                     this.loadFolderContents({ path: this.currentPath });
                 } else {
                     alert("Error deleting file.");
                 }
             } catch (error) {
-                alert("Error deleting file.");
+                if (error.response.data.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    console.error("Error deleting file:", error);
+                    alert("Error deleting file.");
+                }
+
             }
         },
 
         async handleBulkDelete(fileKeys) {
             try {
                 const id = this.selectedBucket;
-                const response = await axios.delete(`http://localhost:3000/api/files/${id}`, {
+                const response = await api.delete(`/files/${id}`, {
                     data: {
                         filePaths: fileKeys
+                    },
+                    headers: {
+                        "authorization": `Bearer ${localStorage.getItem('token')}`
                     }
                 })
-                if (response.status == 200) {
+                if (response.data.message === "Files deleted successfully") {
                     this.loadFolderContents({ path: this.currentPath });
                 } else {
                     alert("Error deleting selected files.");
                 }
             } catch (error) {
-                alert("Error deleting selected files.");
+                if (error.response.data.message === "Invalid token") {
+                    alert("session expired.Please login again");
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    alert("Error deleting selected files.");
+                }
             }
         },
         //handle folder double click to navigate

@@ -5,31 +5,28 @@
                 <div class="col-md-6 col-lg-4">
                     <div class="card shadow-lg border-0">
                         <div class="card-body p-5">
-                            <!-- Login form header -->
+
                             <div class="text-center mb-4">
                                 <i class="fas fa-cloud fa-3x text-primary mb-3"></i>
                                 <h2 class="card-title mb-2">S3 File Manager</h2>
                                 <p class="text-muted">Sign in to your account</p>
                             </div>
 
-                            <!-- API Error Message -->
+                            <!-- error message to show -->
                             <div v-if="apiError" class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="fas fa-exclamation-circle me-2"></i>
                                 {{ apiError }}
                             </div>
 
-                            <!-- Login form -->
-                            <form @submit.prevent="handleSubmit">
+
+                            <form @submit.prevent="handleLogin">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">
                                         <i class="fas fa-envelope me-1"></i>
                                         Email Address
                                     </label>
                                     <input type="email" class="form-control" id="email" v-model="form.email"
-                                        :class="{ 'is-invalid': errors.email }" placeholder="Enter your email" />
-                                    <div class="invalid-feedback" v-if="errors.email">
-                                        {{ errors.email }}
-                                    </div>
+                                        placeholder="Enter your email" />
                                 </div>
 
                                 <div class="mb-4">
@@ -47,7 +44,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Login button -->
+
                                 <button type="submit" class="btn btn-primary w-100 mb-3" :disabled="isSubmitting">
                                     <span v-if="isSubmitting">
                                         <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -68,9 +65,7 @@
 </template>
 
 <script>
-import * as yup from 'yup';
-import axios from 'axios';
-
+import api from "@/utils/api"
 export default {
     name: 'LoginPage',
     data() {
@@ -79,72 +74,36 @@ export default {
                 email: '',
                 password: ''
             },
-            errors: {
-                email: ''
-            },
             apiError: '',
             isSubmitting: false,
             showPassword: false,
             errorTimeout: null,
-            validationSchema: yup.object().shape({
-                email: yup.string()
-                    .required('Email is required')
-                    .email('Please enter a valid email')
-            })
         }
     },
     methods: {
-        async handleSubmit() {
-            this.isSubmitting = true;
-            this.clearApiError();
+        async handleLogin() {
             try {
-
-                await this.validateForm();
-
-
-                if (!this.errors.email) {
-                    await this.login();
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-            } finally {
-                this.isSubmitting = false;
-            }
-        },
-        async validateForm() {
-            try {
-
-                this.errors = { email: '' };
-
-
-                await this.validationSchema.validate(this.form, { abortEarly: false });
-            } catch (err) {
-
-                err.inner.forEach(error => {
-                    this.errors[error.path] = error.message;
-                });
-                throw err;
-            }
-        },
-        async login() {
-            try {
-                const response = await axios.get('http://localhost:3000/api/auth/login', {
+                this.isSubmitting = true;
+                this.clearApiError();
+                const response = await api.post('/auth/login', {
                     email: this.form.email,
                     password: this.form.password
-                }, {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                if (!response.data.success) {
-                    throw new Error('Invalid credentials');
-                }
+                });
+
                 //store info in localstorage
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
                 this.$router.push({ name: 'Home' });
             } catch (error) {
-                this.showApiError(error.message || 'Login failed. Please try again.');
+                if (error.response) {
+                    const errorMessage = error.response.data.message || 'Login failed. Please try again.';
+                    this.showApiError(errorMessage);
+                } else {
+                    this.showApiError('Network error or server is not responding.');
+                }
+
+            } finally {
+                this.isSubmitting = false;
             }
         },
         showApiError(message) {

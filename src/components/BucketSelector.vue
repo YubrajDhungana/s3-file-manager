@@ -6,8 +6,9 @@
         </label>
         <div ref="dropdownRef" class="dropdown" :class="{ show: isDropdownOpen }">
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" @click="toggleDropdown"
-                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="!selectedAccount || loading"
-                :class="{ 'btn-outline-primary': selectedBucket }" :aria-expanded="isDropdownOpen" aria-haspopup="true" >
+                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown"
+                :disabled="!selectedAccount || loading" :class="{ 'btn-outline-primary': selectedBucket }"
+                :aria-expanded="isDropdownOpen" aria-haspopup="true">
                 {{ selectedBucketName || 'Select Bucket' }}
             </button>
             <ul class="dropdown-menu w-100" :class="{ show: isDropdownOpen }" role="menu">
@@ -49,15 +50,20 @@ export default {
             type: Array,
             default: () => []
         },
-        loading:{
+        loading: {
             type: Boolean,
-            default:false
+            default: false
         }
     },
     computed: {
         selectedBucketName() {
-            const bucket = this.buckets.find(b => b.id === this.selectedBucket);
-            return bucket ? bucket.bucket_name : '';
+            if (!this.buckets || this.buckets.length === 0 || !this.selectedBucket) {
+                return '';
+            } else {
+                const bucket = this.buckets.find(b => b.id === this.selectedBucket);
+                return bucket ? bucket.bucket_name : '';
+            }
+
         }
     },
     data() {
