@@ -52,7 +52,8 @@
                             <!-- Account Selector -->
                             <div class="mb-3">
                                 <AccountSelector :selected-account="selectedAccount"
-                                    @account-change="handleAccountChange" :accounts="accounts" />
+                                    @account-change="handleAccountChange" :accounts="accounts"
+                                    :loading="loadingAccounts" />
                             </div>
 
                             <!-- Bucket Selector -->
@@ -60,11 +61,6 @@
                                 <BucketSelector :selected-bucket="selectedBucket" :selected-account="selectedAccount"
                                     @bucket-change="handleBucketChange" :buckets="buckets" :loading="loadingBuckets" />
                             </div>
-
-                            <!-- Search Filter -->
-                            <!-- <div class="mb-3">
-                                <SearchFilter :disabled="!selectedBucket || !selectedAccount" @search="handleSearch" />
-                            </div> -->
                         </div>
                     </div>
                 </div>
@@ -116,7 +112,6 @@ import AccountSelector from "../components/AccountSelector.vue";
 import BucketSelector from "../components/BucketSelector.vue";
 import FileUpload from "../components/FileUpload.vue";
 import FileList from "../components/FileList.vue";
-//import SearchFilter from "../components/SearchFilter.vue";
 import FolderNavigation from "../components/FolderNavigation.vue";
 import api from '../utils/api'
 
@@ -127,7 +122,6 @@ export default {
         BucketSelector,
         FileUpload,
         FileList,
-        //SearchFilter,
         FolderNavigation
     },
     data() {
@@ -145,6 +139,7 @@ export default {
             loading: false,
             perPage: 10,
             loadingBuckets: false,
+            loadingAccounts: false,
             currentUser: {
                 name: '',
                 email: ''
@@ -179,9 +174,6 @@ export default {
             }
         },
 
-        async loadAccounts() {
-            this.accounts = [{ id: "acc1", name: "Account 1", region: "us-east-1" }];
-        },
         async handleLogout() {
             if (confirm('Are you sure you want to logout?')) {
                 await api.post('/auth/logout')
@@ -191,14 +183,30 @@ export default {
             }
         },
 
+        async loadAccounts() {
+            //this.accounts = [{ id: "acc1", name: "Account 1", region: "us-east-1" }];
+            try {
+                this.loadingAccounts = true;
+                const response = await api.get('/accounts/');
+                this.accounts = response.data || []
+            } catch (error) {
+                console.error("Error loading buckets:", error);
+                if (error.response?.data?.message === "Invalid token" || error.response?.status === 401) {
+                    alert("session expired.Please login again");
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    console.error("Error loading buckets:", error);
+                    alert("Error loading buckets. Please try again.");
+                }
+                this.accounts = [];
+            } finally {
+                this.loadingAccounts = false;
+            }
+        },
         async loadBuckets() {
             try {
                 this.loadingBuckets = true;
-                const response = await api.get('/buckets/list-buckets', {
-                    headers: {
-                        "authorization": `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
+                const response = await api.get('/buckets/list-buckets');
                 console.log("Buckets response:", response.data);
                 this.buckets = response.data || [];
             } catch (error) {
@@ -381,6 +389,7 @@ export default {
             this.selectedAccount = accountId;
             this.buckets = [];
             this.currentPath = ''
+            this.selectedBucket = '';
             this.currentItems = []
             this.loadBuckets();
         },

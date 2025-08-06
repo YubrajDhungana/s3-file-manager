@@ -6,7 +6,7 @@
         </label>
         <div ref="dropdownRef" class="dropdown" :class="{ show: isDropdownOpen }">
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" @click="toggleDropdown"
-                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown"
+                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="loading" 
                 :class="{ 'btn-outline-primary': selectedAccount }" :aria-expanded="isDropdownOpen"
                 aria-haspopup="true">
                 {{ selectedAccountName || 'Select Account' }}
@@ -21,8 +21,8 @@
                         :class="{ 'active': selectedAccount === account.id }" role="menuitem"
                         :tabindex="isDropdownOpen ? 0 : -1">
                         <div>
-                            <div class="fw-medium">{{ account.name }}</div>
-                            <small class="text-muted">{{ account.region }}</small>
+                            <div class="fw-medium">{{ account.account_name }}</div>
+                            <!-- <small class="text-muted">{{ account.region }}</small> -->
                         </div>
                         <i v-if="selectedAccount === account.id" class="fas fa-check text-primary"></i>
                     </button>
@@ -43,6 +43,10 @@ export default {
         accounts: {
             type: Array,
             default: () => []
+        },
+        loading: {
+            type: Boolean,
+            default: false
         }
     },
     data() {
@@ -52,8 +56,12 @@ export default {
     },
     computed: {
         selectedAccountName() {
-            const account = this.accounts.find(a => a.id === this.selectedAccount);
-            return account ? account.name : '';
+            if (!this.accounts || this.accounts.length === 0) {
+                return '';
+            } else {
+                const account = this.accounts.find(a => a.id === this.selectedAccount);
+                return account ? account.account_name : '';
+            }
         }
     },
     methods: {
