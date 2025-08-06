@@ -161,16 +161,20 @@ export default {
             console.log(" the auth status method is called")
             try {
                 const response = await api.get('/auth/check-auth');
+                console.log("auth status response: ", response.data);
                 if (response.data.authenticated) {
                     this.currentUser = {
-                        name: response.data.user.name || '',
-                        email: response.data.user.email | ''
+                        name: response.data.name || '',
+                        email: response.data.email || ''
                     }
                 }
                 console.log("current user: ", this.currentUser);
             } catch (error) {
                 if (error.response?.status === 401) {
-                    this.handleLogout(); // Force logout if token is invalid
+                    // this.handleLogout(); // Force logout if token is invalid
+                    alert("session expired.Please login again");
+                    this.$router.push({ name: 'Login' });
+
                 }
             }
         },
@@ -190,19 +194,17 @@ export default {
         async loadBuckets() {
             try {
                 this.loadingBuckets = true;
-                // Debug: Check what cookies exist
-                console.log('Document cookies:', document.cookie);
                 const response = await api.get('/buckets/list-buckets', {
                     headers: {
                         "authorization": `Bearer ${localStorage.getItem('token')}`
                     }
                 });
+                console.log("Buckets response:", response.data);
                 this.buckets = response.data || [];
             } catch (error) {
-                if (error.response?.data?.message === "Invalid token") {
+                console.error("Error loading buckets:", error);
+                if (error.response?.data?.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
                     this.$router.push({ name: 'Login' });
                 } else {
                     console.error("Error loading buckets:", error);
@@ -248,10 +250,8 @@ export default {
                     console.log("Loaded folder contents:", this.currentItems);
                 }
             } catch (error) {
-                if (error.response.data.message === "Invalid token") {
+                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
                     this.$router.push({ name: 'Login' });
                 } else {
                     console.error("Error loading folder contents:", error);
@@ -298,7 +298,7 @@ export default {
                     this.$refs.fileList.updatePaginationToken(this.nextContinuationToken);
                 }
             } catch (error) {
-                if (error.response.data.message === "Invalid token") {
+                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
@@ -325,7 +325,17 @@ export default {
                     formData.append('files', file);
                 });
                 const id = this.selectedBucket;
-                const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
+                let uploadPath;
+                if (this.currentPath) {
+                    if (this.currentPath === '/') {
+                        uploadPath = '/';
+                    } else {
+                        uploadPath = `${this.currentPath}/`;
+                    }
+                }
+                //const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
+                console.log('currentPath:', this.currentPath);
+                console.log("Upload path:", uploadPath);
                 formData.append('key', uploadPath)
                 console.log("Uploading files to path:", uploadPath);
                 await api.post(`/files/${id}/upload`, formData, {
@@ -351,7 +361,7 @@ export default {
                 // Reload the current folder contents after upload
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
-                if (error.response.data.message === "Invalid token") {
+                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
@@ -403,7 +413,7 @@ export default {
                 });
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
-                if (error.response.data.message === "Invalid token") {
+                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
@@ -434,7 +444,7 @@ export default {
                     alert("Error deleting file.");
                 }
             } catch (error) {
-                if (error.response.data.message === "Invalid token") {
+                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
@@ -464,7 +474,7 @@ export default {
                     alert("Error deleting selected files.");
                 }
             } catch (error) {
-                if (error.response.data.message === "Invalid token") {
+                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
                     alert("session expired.Please login again");
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');

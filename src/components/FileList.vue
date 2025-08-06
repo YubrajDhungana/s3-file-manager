@@ -7,8 +7,8 @@
                 <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 300px;">
                     <div class="search-container d-flex align-items-center gap-2" style="max-width: 400px;">
                         <input type="text" v-model="searchInput" class="form-control form-control-sm"
-                            placeholder="Search files..." @keyup.enter="performSearch"
-                            style="min-width: 200px;" :disabled="disabled">
+                            placeholder="Search files..." @keyup.enter="performSearch" style="min-width: 200px;"
+                            :disabled="disabled">
                         <button class="btn btn-sm btn-outline-primary search-btn" type="button" @click="performSearch"
                             :title="'Search'" :disabled="disabled">
                             <i class="fas fa-search"></i>
@@ -76,6 +76,10 @@
                                 <th scope="col" class="col-actions text-center">
                                     <i class="fas fa-cogs me-2"></i>
                                     Actions
+                                </th>
+                                <th scope="col" class="col-copy">
+                                    <i class="fas fa-copy me-2"></i>
+                                    Copy link
                                 </th>
                             </tr>
                         </thead>
@@ -159,10 +163,22 @@
                                         </div>
                                     </div>
                                 </td>
+                                <td class="col-copy align-middle text-center">
+                                    <div v-if="item.type === 'folder'" class="text-muted">-</div>
+                                    <div v-else>
+                                        <button class="btn btn-sm btn-outline-secondary" @click="copyLink(item.url)">
+                                            <i class="fas fa-copy me-2"></i>
+                                            Copy Link
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+            </div>
+            <div v-if="copiedMessage" class="alert alert-success mt-2">
+                {{ copiedMessage }}
             </div>
         </div>
 
@@ -174,7 +190,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 text-nowrap">Rows per page:</label>
                             <select v-model="itemsPerPage" @change="changeItemsPerPage"
-                                class="form-select form-select-sm" style="width: auto;" :disabled="searchInput!=''">
+                                class="form-select form-select-sm" style="width: auto;" :disabled="searchInput != ''">
                                 <option :value="10">10</option>
                                 <option :value="20">20</option>
                                 <option :value="50">50</option>
@@ -246,7 +262,8 @@ export default {
             searchInput: '',
             //storing pagination token for navigation
             paginationTokens: [""],//first page always starts with null
-            currentTokenIndex: 0
+            currentTokenIndex: 0,
+            copiedMessage:''
         }
     },
     computed: {
@@ -269,7 +286,7 @@ export default {
         },
         clearSearch() {
             this.searchInput = '';
-            this.$emit('search','');
+            this.$emit('search', '');
         },
         isItemSelected(item) {
             return this.selectedItems.includes(item.key);
@@ -450,6 +467,15 @@ export default {
                 this.$emit('folderDoubleClick', item.name)
             }
             // For files, you could implement file preview/download here
+        },
+        async copyLink(url){
+            try{
+                await navigator.clipboard.writeText(url)
+                this.copiedMessage='Link copied to clipboard'
+                setTimeout(()=>(this.copiedMessage=''),2000);
+            }catch(error){
+                console.error("Failed to copy text: ", error);
+            }
         }
     }
 }

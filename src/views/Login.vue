@@ -90,10 +90,10 @@ export default {
                     password: this.form.password
                 });
 
-                //store info in localstorage
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-                this.$router.push({ name: 'Home' });
+                if (response.data) {
+                    this.$router.push({ name: 'Home' });
+                }
+                
             } catch (error) {
                 if (error.response) {
                     const errorMessage = error.response.data.message || 'Login failed. Please try again.';
