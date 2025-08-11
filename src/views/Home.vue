@@ -195,8 +195,8 @@ export default {
                     alert("session expired.Please login again");
                     this.$router.push({ name: 'Login' });
                 } else {
-                    console.error("Error loading buckets:", error);
-                    alert("Error loading buckets. Please try again.");
+                    console.error("Error loading accounts:", error);
+                    alert("Error loading accounts. Please try again.");
                 }
                 this.accounts = [];
             } finally {
@@ -206,7 +206,8 @@ export default {
         async loadBuckets() {
             try {
                 this.loadingBuckets = true;
-                const response = await api.get('/buckets/list-buckets');
+                const id = this.selectedAccount;
+                const response = await api.get(`/buckets/${id}/list-buckets`);
                 console.log("Buckets response:", response.data);
                 this.buckets = response.data || [];
             } catch (error) {
