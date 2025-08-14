@@ -263,7 +263,7 @@ export default {
             //storing pagination token for navigation
             paginationTokens: [""],//first page always starts with null
             currentTokenIndex: 0,
-            copiedMessage:''
+            copiedMessage: ''
         }
     },
     computed: {
@@ -443,7 +443,11 @@ export default {
         },
         saveRename(oldKey) {
             if (this.editingName.trim()) {
-                this.newKey = this.currentPath + '/' + this.editingName.trim()
+                if (this.currentPath === '') {
+                    this.newKey = this.editingName.trim()
+                } else {
+                    this.newKey = this.currentPath + '/' + this.editingName.trim()
+                }
                 console.log('Renaming item:', oldKey, 'to', this.newKey)
                 this.$emit('fileRename', oldKey, this.newKey)
             }
@@ -468,12 +472,12 @@ export default {
             }
             // For files, you could implement file preview/download here
         },
-        async copyLink(url){
-            try{
+        async copyLink(url) {
+            try {
                 await navigator.clipboard.writeText(url)
-                this.copiedMessage='Link copied to clipboard'
-                setTimeout(()=>(this.copiedMessage=''),2000);
-            }catch(error){
+                this.copiedMessage = 'Link copied to clipboard'
+                setTimeout(() => (this.copiedMessage = ''), 2000);
+            } catch (error) {
                 console.error("Failed to copy text: ", error);
             }
         }

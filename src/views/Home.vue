@@ -148,31 +148,27 @@ export default {
     },
     mounted() {
         this.loadAccounts();
-        this.authStatus();
     },
     methods: {
 
-        async authStatus() {
-            console.log(" the auth status method is called")
-            try {
-                const response = await api.get('/auth/check-auth');
-                console.log("auth status response: ", response.data);
-                if (response.data.authenticated) {
-                    this.currentUser = {
-                        name: response.data.name || '',
-                        email: response.data.email || ''
-                    }
-                }
-                console.log("current user: ", this.currentUser);
-            } catch (error) {
-                if (error.response?.status === 401) {
-                    // this.handleLogout(); // Force logout if token is invalid
-                    alert("session expired.Please login again");
-                    this.$router.push({ name: 'Login' });
-
-                }
-            }
-        },
+        // async authStatus() {
+        //     console.log(" the auth status method is called")
+        //     try {
+        //         const response = await api.get('/auth/check-auth');
+        //         console.log("auth status response: ", response.data);
+        //         if (response.data.authenticated) {
+        //             this.currentUser = {
+        //                 name: response.data.name || '',
+        //                 email: response.data.email || ''
+        //             }
+        //         }
+        //         console.log("current user: ", this.currentUser);
+        //     } catch (error) {
+        //         if (error.response?.status === 401) {
+        //             this.$router.push({ name: 'Login' });
+        //         }
+        //     }
+        // },
 
         async handleLogout() {
             if (confirm('Are you sure you want to logout?')) {
@@ -243,9 +239,6 @@ export default {
                         params: {
                             folder: this.currentPath,
                             search: searchQuery
-                        },
-                        headers: {
-                            "authorization": `Bearer ${localStorage.getItem('token')}`
                         }
                     })
                     if (!response.data || response.data.items?.length === 0) {
@@ -284,10 +277,7 @@ export default {
                     folder: params.path || params.searchQuery
                 };
                 const response = await api.get(`/files/${id}/listByFolder`, {
-                    params: requestParams,
-                    headers: {
-                        "authorization": `Bearer ${localStorage.getItem('token')}`
-                    }
+                    params: requestParams
                 })
                 if (!response.data || response.data.items?.length === 0) {
                     this.currentItems = [];
@@ -349,8 +339,7 @@ export default {
                 console.log("Uploading files to path:", uploadPath);
                 await api.post(`/files/${id}/upload`, formData, {
                     headers: {
-                        'Content-Type': 'multipart/form-data',
-                        "authorization": `Bearer ${localStorage.getItem('token')}`
+                        'Content-Type': 'multipart/form-data'
                     },
                     onUploadProgress: (progressEvent) => {
                         if (progressEvent.total) {
@@ -417,9 +406,6 @@ export default {
                 await api.patch(`/files/${id}/rename`, {
                     oldKey: oldKey,
                     newKey: newKey,
-                    headers: {
-                        "authorization": `Bearer ${localStorage.getItem('token')}`
-                    }
                 });
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
@@ -443,9 +429,6 @@ export default {
                 const response = await api.delete(`/files/${id}`, {
                     data: {
                         filePaths: [key]
-                    },
-                    headers: {
-                        "authorization": `Bearer ${localStorage.getItem('token')}`
                     }
                 });
                 if (response.data.message === "Files deleted successfully") {

@@ -93,7 +93,7 @@ export default {
                 if (response.data) {
                     this.$router.push({ name: 'Home' });
                 }
-                
+
             } catch (error) {
                 if (error.response) {
                     const errorMessage = error.response.data.message || 'Login failed. Please try again.';

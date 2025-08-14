@@ -3,11 +3,6 @@ import Home from "@/views/Home.vue";
 import Login from "@/views/Login.vue";
 import api from "@/utils/api";
 
-// const isAuthenticated = () => {
-//   const token = localStorage.getItem("token");
-//   return !!token;
-// };
-
 const routes = [
   {
     name: "Home",
@@ -27,18 +22,61 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-  if (to.name === "Login") {
-    try {
-      const response = await api.get("/auth/check-auth");
-      if (response.data.authenticated) {
+  if (to.name === "Login" && from.name === "Home") {
+    return next();
+  }
+
+  try {
+    const response = await api.get("/auth/check-auth");
+    const isAuthenticated = response.data.authenticated;
+
+    if (to.name === "Login") {
+      if (isAuthenticated) {
         return next({ name: "Home" });
       }
-    } catch (error) {
-      console.error("Authentication check failed:", error);
-      next();
+
+      return next();
     }
+
+    if (to.name === "Home") {
+      if (!isAuthenticated) {
+        return next({ name: "Login" });
+      }
+
+      return next();
+    }
+    next();
+  } catch (error) {
+    console.error("Authentication check failed:", error);
+
+    if (to.name === "Home") {
+      return next({ name: "Login" });
+    }
+    next();
   }
-  next();
+
+  // if (to.name === "Login") {
+  //   try {
+  //     const response = await api.get("/auth/check-auth");
+  //     if (response.data.authenticated) {
+  //       return next({ name: "Home" });
+  //     }
+  //   } catch (error) {
+  //     console.error("Authentication check failed:", error);
+  //     next();
+  //   }
+  // }else if (to.name === "Home") {
+  //   try {
+  //     const response = await api.get("/auth/check-auth");
+  //     if (!response.data.authenticated) {
+  //       return next({ name: "Login" });
+  //     }
+  //   } catch (error) {
+  //     console.error("Authentication check failed:", error);
+  //     return next({ name: "Login" });
+  //   }
+  // }
+  // next();
 });
 
 export default router;
