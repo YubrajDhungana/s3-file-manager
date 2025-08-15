@@ -12,11 +12,11 @@
                                 <p class="text-muted">Sign in to your account</p>
                             </div>
 
-                            <!-- error message to show -->
+                            <!-- error message to show
                             <div v-if="apiError" class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="fas fa-exclamation-circle me-2"></i>
                                 {{ apiError }}
-                            </div>
+                            </div> -->
 
 
                             <form @submit.prevent="handleLogin">
@@ -66,6 +66,7 @@
 
 <script>
 import api from "@/utils/api"
+import { useToast } from "vue-toastification";
 export default {
     name: 'LoginPage',
     data() {
@@ -74,7 +75,7 @@ export default {
                 email: '',
                 password: ''
             },
-            apiError: '',
+            //apiError: '',
             isSubmitting: false,
             showPassword: false,
             errorTimeout: null,
@@ -82,46 +83,33 @@ export default {
     },
     methods: {
         async handleLogin() {
+            const toast = useToast();
             try {
                 this.isSubmitting = true;
-                this.clearApiError();
+                //this.clearApiError();
                 const response = await api.post('/auth/login', {
                     email: this.form.email,
                     password: this.form.password
                 });
+
+                const toastTimeout = 2000; 
+                toast.success(response.data?.message || "Logged in successfully!");
+                await new Promise(resolve => setTimeout(resolve, toastTimeout));
 
                 if (response.data) {
                     this.$router.push({ name: 'Home' });
                 }
 
             } catch (error) {
-                if (error.response) {
-                    const errorMessage = error.response.data.message || 'Login failed. Please try again.';
-                    this.showApiError(errorMessage);
+                if (error.response?.data?.message) {
+                    toast.error(error.response.data.message);
                 } else {
-                    this.showApiError('Network error or server is not responding.');
+                    toast.error("Login failed. Please try again.");
                 }
-
             } finally {
                 this.isSubmitting = false;
             }
         },
-        showApiError(message) {
-            this.apiError = message;
-
-            if (this.errorTimeout) clearTimeout(this.errorTimeout);
-
-            this.errorTimeout = setTimeout(() => {
-                this.apiError = '';
-            }, 3000);
-        },
-        clearApiError() {
-            this.apiError = '';
-            if (this.errorTimeout) {
-                clearTimeout(this.errorTimeout);
-                this.errorTimeout = null;
-            }
-        }
     },
     beforeUnmount() {
         if (this.errorTimeout) clearTimeout(this.errorTimeout);

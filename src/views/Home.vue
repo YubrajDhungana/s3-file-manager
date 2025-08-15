@@ -114,7 +114,7 @@ import FileUpload from "../components/FileUpload.vue";
 import FileList from "../components/FileList.vue";
 import FolderNavigation from "../components/FolderNavigation.vue";
 import api from '../utils/api'
-
+import { useToast } from "vue-toastification";
 export default {
     name: "HomePage",
     components: {
@@ -151,7 +151,6 @@ export default {
         this.loadAccounts();
     },
     methods: {
-
         // async authStatus() {
         //     console.log(" the auth status method is called")
         //     try {
@@ -172,16 +171,25 @@ export default {
         // },
 
         async handleLogout() {
-            if (confirm('Are you sure you want to logout?')) {
-                await api.post('/auth/logout')
-                    .finally(() => {
-                        this.$router.push({ name: 'Login' });                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
-                    })
+            const toast = useToast();
+            try {
+                if (confirm('Are you sure you want to logout?')) {
+                    await api.post('/auth/logout')
+                    toast.success("Logged out successfully");
+                    this.$router.push({ name: 'Login' });
+                }
+            } catch (error) {
+                if (error.response?.status === 401) {
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    toast.error("Logout failed. Please try again.");
+                }
             }
+
         },
 
         async loadAccounts() {
-            //this.accounts = [{ id: "acc1", name: "Account 1", region: "us-east-1" }];
+            const toast = useToast();
             try {
                 if (this.$route.meta.user) {
                     this.currentUser = {
@@ -194,13 +202,12 @@ export default {
                 const response = await api.get('/accounts/');
                 this.accounts = response.data || []
             } catch (error) {
-                console.error("Error loading buckets:", error);
-                if (error.response?.data?.message === "Invalid token" || error.response?.status === 401) {
-                    alert("session expired.Please login again");
+                console.error("Error loading buckets:", error.response?.data?.message);
+                if (error.response?.data?.message === "Invalid token" || error.response?.data?.message === "Token revoked") {
+                    toast.error("Session expired. Please login again.");
                     this.$router.push({ name: 'Login' });
                 } else {
                     console.error("Error loading accounts:", error);
-                    alert("Error loading accounts. Please try again.");
                 }
                 this.accounts = [];
             } finally {
@@ -409,12 +416,16 @@ export default {
         },
 
         async handleFileRename(oldKey, newKey) {
+            const toast = useToast();
             try {
                 const id = this.selectedBucket;
-                await api.patch(`/files/${id}/rename`, {
+                const response = await api.patch(`/files/${id}/rename`, {
                     oldKey: oldKey,
                     newKey: newKey,
                 });
+                if (response.data.message) {
+                    toast.success(response.data.message);
+                }
                 this.loadFolderContents({ path: this.currentPath });
             } catch (error) {
                 if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
@@ -432,6 +443,7 @@ export default {
         },
 
         async handleFileDelete(key) {
+            const toast = useToast();
             try {
                 const id = this.selectedBucket;
                 const response = await api.delete(`/files/${id}`, {
@@ -440,9 +452,8 @@ export default {
                     }
                 });
                 if (response.data.message === "Files deleted successfully") {
+                    toast.success(response.data.message);
                     this.loadFolderContents({ path: this.currentPath });
-                } else {
-                    alert("Error deleting file.");
                 }
             } catch (error) {
                 if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
@@ -459,6 +470,7 @@ export default {
         },
 
         async handleBulkDelete(fileKeys) {
+            const toast = useToast();
             try {
                 const id = this.selectedBucket;
                 const response = await api.delete(`/files/${id}`, {
@@ -470,18 +482,17 @@ export default {
                     }
                 })
                 if (response.data.message === "Files deleted successfully") {
+                    toast.success(response.data.message);
                     this.loadFolderContents({ path: this.currentPath });
                 } else {
-                    alert("Error deleting selected files.");
+                    toast.error("Error deleting selected files.");
                 }
             } catch (error) {
                 if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
-                    alert("session expired.Please login again");
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
+                    toast.error("session expired.Please login again");
                     this.$router.push({ name: 'Login' });
                 } else {
-                    alert("Error deleting selected files.");
+                    toast.error("Error deleting selected files.");
                 }
             }
         },
