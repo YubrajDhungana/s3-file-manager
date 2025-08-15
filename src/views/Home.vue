@@ -147,6 +147,7 @@ export default {
         };
     },
     mounted() {
+        //this.authStatus();
         this.loadAccounts();
     },
     methods: {
@@ -174,7 +175,7 @@ export default {
             if (confirm('Are you sure you want to logout?')) {
                 await api.post('/auth/logout')
                     .finally(() => {
-                        this.$router.push({ name: 'Login' });
+                        this.$router.push({ name: 'Login' });                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
                     })
             }
         },
@@ -182,6 +183,13 @@ export default {
         async loadAccounts() {
             //this.accounts = [{ id: "acc1", name: "Account 1", region: "us-east-1" }];
             try {
+                if (this.$route.meta.user) {
+                    this.currentUser = {
+                        name: this.$route.meta.user.name || '',
+                        email: this.$route.meta.user.email || ''
+                    }
+                }
+
                 this.loadingAccounts = true;
                 const response = await api.get('/accounts/');
                 this.accounts = response.data || []
