@@ -1,6 +1,37 @@
 <template>
     <div class="item-manager-container">
-        <!-- Actions Bar (Search + Bulk Actions) -->
+
+        <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ previewFileName }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img v-if="isImageFile(previewFileUrl)" :src="previewFileUrl" class="img-fluid" alt="Preview">
+                        <iframe v-else-if="isPdfFile(previewFileUrl)" :src="previewFileUrl" class="w-100"
+                            style="height: 70vh;"></iframe>
+                        <div v-else-if="isExcelFile(previewFileUrl)" class="excel-preview-container">
+                            <iframe
+                                :src="`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFileUrl)}`" 
+                                width="100%" height="500px" frameborder="0">
+                            </iframe>
+                        </div>
+                        <div v-else class="text-muted">
+                            Preview not available for this file type
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <a :href="previewFileUrl" class="btn btn-primary" download target="_blank">
+                            <i class="fas fa-download me-2"></i>Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="actions-bar mb-3 p-3 bg-light rounded">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <!-- Left side: Search -->
@@ -141,6 +172,11 @@
                                 <td class="col-actions align-middle text-center">
                                     <div v-if="item.type === 'folder'" class="text-muted">-</div>
                                     <div v-else class="action-buttons">
+                                        <button v-if="editingFile !== item.key && item.type === 'file'" type="button"
+                                            class="btn btn-sm btn-outline-info" @click="previewFile(item)"
+                                            :title="`Preview ${item.name}`" :disabled="disabled">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                         <button v-if="editingFile !== item.key" type="button"
                                             class="btn btn-sm btn-outline-primary" @click="startRename(item)"
                                             :title="`Rename ${item.type === 'folder' ? 'folder' : 'file'}`">
@@ -150,6 +186,11 @@
                                             class="btn btn-sm btn-outline-danger" @click="deleteItem(item.key)"
                                             :title="`Delete ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-trash"></i>
+                                        </button>
+                                        <button v-if="editingFile !== item.key" type="button"
+                                            class="btn btn-sm btn-outline-secondary" @click="downloadItem(item)"
+                                            :title="`Download ${item.type === 'folder' ? 'folder' : 'file'}`">
+                                            <i class="fas fa-download"></i>
                                         </button>
                                         <div v-if="editingFile === item.key" class="d-flex gap-1">
                                             <button type="button" class="btn btn-sm btn-success"
@@ -224,6 +265,7 @@
 </template>
 
 <script>
+import { Modal } from 'bootstrap/dist/js/bootstrap.bundle.min';
 export default {
     name: 'FileList',
     props: {
@@ -250,7 +292,7 @@ export default {
         }
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'fileDownload'],
     data() {
         return {
             selectedItems: [],
@@ -261,9 +303,14 @@ export default {
             itemsPerPage: 10,
             searchInput: '',
             //storing pagination token for navigation
-            paginationTokens: [""],//first page always starts with null
+            paginationTokens: [""],
             currentTokenIndex: 0,
-            copiedMessage: ''
+            copiedMessage: '',
+
+            previewFileUrl: '',
+            previewFileName: '',
+            previewFileContent: '',
+            modal: null
         }
     },
     computed: {
@@ -480,7 +527,41 @@ export default {
             } catch (error) {
                 console.error("Failed to copy text: ", error);
             }
+        },
+
+        downloadItem(item) {
+            window.open(item.url, '_blank');
+        },
+        isExcelFile(url) {
+            if (!url) return false;
+            const excelExtensions = ['xls', 'xlsx', 'xlsm', 'xlsb'];
+            const extension = this.getFileExtension(url).toLowerCase();
+            return excelExtensions.includes(extension);
+        },
+        isImageFile(url) {
+            if (!url) return false;
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            const extension = this.getFileExtension(url).toLowerCase();
+            return imageExtensions.includes(extension);
+        },
+        isPdfFile(url) {
+            if (!url) return false;
+            return this.getFileExtension(url).toLowerCase() === 'pdf';
+        },
+        async previewFile(item) {
+            if (item.type !== 'file') return;
+
+            this.previewFileUrl = item.url;
+            this.previewFileName = item.name;
+            this.previewFileContent = '';
+
+            //intializing modal
+            if (!this.modal) {
+                this.modal = new Modal(document.getElementById('filePreviewModal'));
+            }
+            this.modal.show();
         }
+
     }
 }
 </script>

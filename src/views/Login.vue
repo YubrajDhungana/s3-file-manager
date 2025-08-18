@@ -92,7 +92,7 @@ export default {
                     password: this.form.password
                 });
 
-                const toastTimeout = 2000; 
+                const toastTimeout = 1500; 
                 toast.success(response.data?.message || "Logged in successfully!");
                 await new Promise(resolve => setTimeout(resolve, toastTimeout));
 

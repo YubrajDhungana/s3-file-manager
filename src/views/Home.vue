@@ -339,7 +339,7 @@ export default {
                     formData.append('files', file);
                 });
                 const id = this.selectedBucket;
-                let uploadPath;
+                let uploadPath = '';
                 if (this.currentPath) {
                     if (this.currentPath === '/') {
                         uploadPath = '/';
@@ -510,7 +510,6 @@ export default {
             this.loadFolderContents({ path: this.currentPath });
 
         },
-
     },
 };
 </script>

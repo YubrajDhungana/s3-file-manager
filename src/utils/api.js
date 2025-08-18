@@ -8,7 +8,7 @@ console.log("API Base URL:", process.env.VUE_APP_BASE_URL);
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status !== 401) {
+    if (error.response?.status !== 401 && error.response?.status !== 429) {
       const toast = useToast();
       let errorMessage = "An error occurred.";
       if (error.response?.data?.message) {
