@@ -14,7 +14,7 @@
                             style="height: 70vh;"></iframe>
                         <div v-else-if="isExcelFile(previewFileUrl)" class="excel-preview-container">
                             <iframe
-                                :src="`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFileUrl)}`" 
+                                :src="`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFileUrl)}`"
                                 width="100%" height="500px" frameborder="0">
                             </iframe>
                         </div>
@@ -292,7 +292,7 @@ export default {
         }
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'fileDownload'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search'],
     data() {
         return {
             selectedItems: [],
@@ -529,8 +529,8 @@ export default {
             }
         },
 
-        downloadItem(item) {
-            window.open(item.url, '_blank');
+       async downloadItem(item) {
+             window.open(item.url, '_blank');
         },
         isExcelFile(url) {
             if (!url) return false;
