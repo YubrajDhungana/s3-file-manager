@@ -1,0 +1,17 @@
+services:
+  s3-file-manager:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VUE_APP_BASE_URL=http://localhost:3000/api
+    stdin_open: true # ←for Vue development
+    tty: true # ← Essential for dev server
+    command: npm run serve
+
+networks:
+  s3-file-manager-network:
+    driver: bridge
