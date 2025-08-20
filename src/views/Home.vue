@@ -86,7 +86,8 @@
                                 @file-delete="handleFileDelete" :current-path="currentPath" :loading="loading"
                                 :is-truncated="isTruncated" @load-data="handleLoadData"
                                 @folder-double-click="handleFolderDoubleClick" @bulk-delete="handleBulkDelete"
-                                :disabled="!selectedBucket || !selectedAccount" @search="handleSearch" />
+                                :disabled="!selectedBucket || !selectedAccount" @search="handleSearch"
+                                @file-download="handleFileDownload" />
                         </div>
                     </div>
 
@@ -186,6 +187,29 @@ export default {
                 }
             }
 
+        },
+
+        async handleFileDownload(item) {
+            const toast = useToast()
+            try {
+                const id = this.selectedBucket;
+                const response = await api.get(`/files/${id}/download`, {
+                    params: { key: item.key },
+                    responseType: 'blob'
+                })
+
+                // Create download link
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', item.name);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                toast.error('Download failed');
+            }
         },
 
         async loadAccounts() {
@@ -348,8 +372,6 @@ export default {
                     }
                 }
                 //const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
-                console.log('currentPath:', this.currentPath);
-                console.log("Upload path:", uploadPath);
                 formData.append('key', uploadPath)
                 console.log("Uploading files to path:", uploadPath);
                 await api.post(`/files/${id}/upload`, formData, {
@@ -368,7 +390,6 @@ export default {
                             this.$refs.fileUpload.updateProgress(progress);
                         }
                     }
-
                 });
 
                 // Reload the current folder contents after upload
@@ -389,7 +410,6 @@ export default {
                 this.$refs.fileUpload.resetProgress();
             }
         },
-
         handleAccountChange(accountId) {
             this.selectedAccount = accountId;
             this.buckets = [];

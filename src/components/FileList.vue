@@ -292,7 +292,7 @@ export default {
         }
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search','fileDownload'],
     data() {
         return {
             selectedItems: [],
@@ -530,7 +530,8 @@ export default {
         },
 
        async downloadItem(item) {
-             window.open(item.url, '_blank');
+             //window.open(item.url, '_blank');
+             this.$emit('fileDownload',item);
         },
         isExcelFile(url) {
             if (!url) return false;
