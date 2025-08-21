@@ -6,7 +6,7 @@
         </label>
         <div ref="dropdownRef" class="dropdown" :class="{ show: isDropdownOpen }">
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" @click="toggleDropdown"
-                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="loading" 
+                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="loading"
                 :class="{ 'btn-outline-primary': selectedAccount }" :aria-expanded="isDropdownOpen"
                 aria-haspopup="true">
                 {{ selectedAccountName || 'Select Account' }}
@@ -104,10 +104,13 @@ export default {
 .dropdown-item:focus {
     cursor: pointer;
     outline: none;
+    transition: all 0.2s ease;
+    /* new */
 }
 
-.dropdown-item:hover {
-    background-color: #f8f9fa;
+.dropdown-menu li:hover {
+    background-color: #c5c9d3;
+    color: #0d6efd;
 }
 
 .dropdown-item.active {

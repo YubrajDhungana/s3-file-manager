@@ -115,9 +115,14 @@ export default {
     outline: none;
 }
 
-.dropdown-item:hover {
-    background-color: #f8f9fa;
+.dropdown-menu li:hover {
+    background-color: #c5c9d3;
+    color: #0d6efd;
 }
+
+/* .dropdown-item:hover {
+    background-color: #f8f9fa;
+} */
 
 .dropdown-item.active {
     background-color: #e7f3ff;

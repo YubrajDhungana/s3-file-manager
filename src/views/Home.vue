@@ -87,7 +87,7 @@
                                 :is-truncated="isTruncated" @load-data="handleLoadData"
                                 @folder-double-click="handleFolderDoubleClick" @bulk-delete="handleBulkDelete"
                                 :disabled="!selectedBucket || !selectedAccount" @search="handleSearch"
-                                @file-download="handleFileDownload" />
+                                @file-download="handleFileDownload" @path-change="handlePathChange" />
                         </div>
                     </div>
 

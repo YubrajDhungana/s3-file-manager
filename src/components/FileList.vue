@@ -33,9 +33,10 @@
         </div>
 
         <div class="actions-bar mb-3 p-3 bg-light rounded">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                <!-- Left side: Search -->
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3  mb-3">
+                <!--  Search -->
                 <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 300px;">
+
                     <div class="search-container d-flex align-items-center gap-2" style="max-width: 400px;">
                         <input type="text" v-model="searchInput" class="form-control form-control-sm"
                             placeholder="Search files..." @keyup.enter="performSearch" style="min-width: 200px;"
@@ -63,6 +64,13 @@
                         Delete Selected
                     </button>
                 </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-secondary" @click="goBack" :disabled="!canGoBack || disabled"
+                    :title="'Go back to parent folder'">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back
+                </button>
             </div>
         </div>
         <!-- Table Container with Fixed Header -->
@@ -292,7 +300,7 @@ export default {
         }
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search','fileDownload'],
+    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'fileDownload', 'pathChange'],
     data() {
         return {
             selectedItems: [],
@@ -323,9 +331,34 @@ export default {
             return selectableItems.length > 0 &&
                 this.selectedItems.length === selectableItems.length;
         },
+        canGoBack() {
+            return this.currentPath !== '';
+        }
     },
 
     methods: {
+        goBack() {
+            if (!this.canGoBack) return;
+            let parentPath = '';
+
+            if (this.currentPath.includes('/')) {
+                const pathParts = this.currentPath.split('/').filter(part => part);
+
+                if (pathParts.length > 1) {
+                    pathParts.pop();
+                    parentPath = pathParts.join('/');
+                } else if (pathParts.length === 1) {
+                    parentPath = '';
+                } else if (this.currentPath === '/') {
+                    parentPath = '';
+                }
+            } else {
+                parentPath = '';
+            }
+            //emmiting the changes
+            this.$emit('pathChange', parentPath);
+        },
+
         performSearch() {
             if (this.searchInput.trim()) {
                 this.$emit('search', this.searchInput.trim());
@@ -352,7 +385,6 @@ export default {
         gotoNextPage() {
             if (this.isTruncated && !this.loading) {
                 this.currentTokenIndex++;
-                // The next continuation token will be provided by parent component
                 this.$emit('loadData', {
                     limit: this.itemsPerPage,
                     continuationToken: this.paginationTokens[this.currentTokenIndex],
@@ -529,9 +561,9 @@ export default {
             }
         },
 
-       async downloadItem(item) {
-             //window.open(item.url, '_blank');
-             this.$emit('fileDownload',item);
+        async downloadItem(item) {
+            //window.open(item.url, '_blank');
+            this.$emit('fileDownload', item);
         },
         isExcelFile(url) {
             if (!url) return false;

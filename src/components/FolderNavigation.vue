@@ -57,7 +57,6 @@ export default {
             if (!this.currentPath) {
                 return [{ name: 'Root', path: '' }]
             }
-
             const items = [{ name: 'Root', path: '' }]
 
             // Special handling for paths starting with the "/" folder
