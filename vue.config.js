@@ -7,7 +7,7 @@ module.exports = defineConfig({
     allowedHosts: 'all',   // Accept requests from any host (needed behind Apache reverse proxy)
     proxy: {
       "/api": {
-        target: process.env.VUE_APP_BASE_URL || "http://localhost:3060/api",
+        target: process.env.VUE_APP_BASE_URL || "https://bucketmanager-api.cloudtechservice.com:3060/api",
         changeOrigin: true,
         pathRewrite: {
           "^/api": "",
