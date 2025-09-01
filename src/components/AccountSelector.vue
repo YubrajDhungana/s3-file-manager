@@ -4,30 +4,15 @@
             <i class="fas fa-user me-1"></i>
             AWS Account
         </label>
-        <div ref="dropdownRef" class="dropdown" :class="{ show: isDropdownOpen }">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" @click="toggleDropdown"
-                @keydown.enter="toggleDropdown" @keydown.space.prevent="toggleDropdown" :disabled="loading"
-                :class="{ 'btn-outline-primary': selectedAccount }" :aria-expanded="isDropdownOpen"
-                aria-haspopup="true">
-                {{ selectedAccountName || 'Select Account' }}
-            </button>
-            <ul class="dropdown-menu w-100" :class="{ show: isDropdownOpen }" role="menu">
-                <li v-for="account in accounts" :key="account.id">
-                    <button type="button"
-                        class="dropdown-item d-flex justify-content-between align-items-center w-100 border-0 bg-transparent text-start"
-                        href="#" @click.prevent="selectAccount(account.id)"
-                        @keydown.enter.prevent="selectAccount(account.id)"
-                        @keydown.space.prevent="selectAccount(account.id)"
-                        :class="{ 'active': selectedAccount === account.id }" role="menuitem"
-                        :tabindex="isDropdownOpen ? 0 : -1">
-                        <div>
-                            <div class="fw-medium">{{ account.account_name }}</div>
-                            <!-- <small class="text-muted">{{ account.region }}</small> -->
-                        </div>
-                        <i v-if="selectedAccount === account.id" class="fas fa-check text-primary"></i>
-                    </button>
-                </li>
-            </ul>
+        <div class="select-wrapper">
+            <select class="form-select custom-select" :class="{ 'form-select-primary': selectedAccount }"
+                :disabled="loading" :value="selectedAccount" @change="selectAccount($event.target.value)"
+                aria-label="Select AWS Account">
+                <option value="" disabled hidden>Select Account</option>
+                <option v-for="account in accounts" :key="account.id" :value="account.id">
+                    {{ account.account_name }}
+                </option>
+            </select>
         </div>
     </div>
 </template>
@@ -49,80 +34,78 @@ export default {
             default: false
         }
     },
-    data() {
-        return {
-            isDropdownOpen: false
-        }
-    },
-    computed: {
-        selectedAccountName() {
-            if (!this.accounts || this.accounts.length === 0) {
-                return '';
-            } else {
-                const account = this.accounts.find(a => a.id === this.selectedAccount);
-                return account ? account.account_name : '';
-            }
-        }
-    },
     methods: {
         selectAccount(accountId) {
             this.$emit('account-change', accountId)
-            this.closeDropdown()
-        },
-
-        toggleDropdown() {
-            this.isDropdownOpen = !this.isDropdownOpen
-        },
-        closeDropdown() {
-            this.isDropdownOpen = false
-        },
-        handleClickOutside(event) {
-            if (this.$refs.dropdownRef && !this.$refs.dropdownRef.contains(event.target)) {
-                this.closeDropdown()
-            }
-        },
-        handleKeydown(event) {
-            if (event.key === 'Escape') {
-                this.closeDropdown()
-            }
         }
-    },
-    mounted() {
-        document.addEventListener('click', this.handleClickOutside)
-        document.addEventListener('keydown', this.handleKeydown)
-    },
-    unmounted() {
-        document.removeEventListener('click', this.handleClickOutside)
-        document.removeEventListener('keydown', this.handleKeydown)
     }
 }
 </script>
 
-
 <style scoped>
-.dropdown-item,
-.dropdown-item:focus {
-    cursor: pointer;
-    outline: none;
+.select-wrapper {
+    position: relative;
+}
+
+.custom-select {
+    appearance: none;
+    background-color: #ffffff;
+    border: 1px solid #6c757d;
+    border-radius: 0.375rem;
+    padding: 0.375rem 2.5rem 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
     transition: all 0.2s ease;
-    /* new */
+    cursor: pointer;
 }
 
-.dropdown-menu li:hover {
-    background-color: #c5c9d3;
-    color: #0d6efd;
+.custom-select:hover {
+    border-color: #0d6efd;
 }
 
-.dropdown-item.active {
-    background-color: #e7f3ff;
-    color: #0d6efd;
+.custom-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    outline: none;
 }
 
-.dropdown-item:focus {
+.custom-select:disabled {
+    background-color: #e9ecef;
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.form-select-primary {
+    border-color: #0d6efd;
+}
+
+.select-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Style the options */
+.custom-select option {
+    padding: 0.375rem 0.75rem;
+    background-color: #ffffff;
+    color: #212529;
+}
+
+.custom-select option:hover {
     background-color: #f8f9fa;
 }
 
-.dropdown-toggle:focus {
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+.custom-select option:checked {
+    background-color: #e7f3ff;
+    color: #0d6efd;
 }
 </style>

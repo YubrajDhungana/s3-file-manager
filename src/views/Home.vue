@@ -192,9 +192,9 @@ export default {
         async handleFileDownload(item) {
             const toast = useToast()
             try {
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 const response = await api.get(`/files/${id}/download`, {
-                    params: { key: item.key },
+                    params: { key: item.key, bucketName: this.selectedBucket },
                     responseType: 'blob'
                 })
 
@@ -242,6 +242,10 @@ export default {
             try {
                 this.loadingBuckets = true;
                 const id = this.selectedAccount;
+                if (!id) {
+                    this.buckets = [];
+                    return;
+                }
                 const response = await api.get(`/buckets/${id}/list-buckets`);
                 console.log("Buckets response:", response.data);
                 this.buckets = response.data || [];
@@ -269,7 +273,7 @@ export default {
             try {
 
                 this.currentItems = [];
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 if (!searchQuery.trim()) {
                     this.loadFolderContents({ path: this.currentPath })
                 } else {
@@ -277,7 +281,8 @@ export default {
                     const response = await api.get(`/files/${id}/search-files`, {
                         params: {
                             folder: this.currentPath,
-                            search: searchQuery
+                            search: searchQuery,
+                            bucketName: this.selectedBucket
                         }
                     })
                     if (!response.data || response.data.items?.length === 0) {
@@ -309,11 +314,12 @@ export default {
         async loadFolderContents(params = {}) {
             try {
                 this.loading = true;
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 const requestParams = {
                     limit: this.perPage,
                     continuationToken: params.continuationToken || '',
-                    folder: params.path || params.searchQuery
+                    folder: params.path || params.searchQuery,
+                    bucketName: this.selectedBucket
                 };
                 const response = await api.get(`/files/${id}/listByFolder`, {
                     params: requestParams
@@ -411,18 +417,24 @@ export default {
             }
         },
         handleAccountChange(accountId) {
+            console.log('Account changed to:', accountId);
             this.selectedAccount = accountId;
             this.buckets = [];
             this.currentPath = ''
             this.selectedBucket = '';
             this.currentItems = []
-            this.loadBuckets();
+            this.loadingBuckets = true;
+            if (accountId) {
+                this.loadBuckets();
+            } else {
+                this.loadingBuckets = false;
+            }
         },
 
-        handleBucketChange(bucketId) {
-            this.selectedBucket = bucketId;
+        handleBucketChange(bucketName) {
+            this.selectedBucket = bucketName;
             this.currentPath = ''
-            if (bucketId) {
+            if (bucketName) {
                 this.loadFolderContents({ continuationToken: this.nextContinuationToken, folder: this.currentPath })
             } else {
                 this.currentItems = []
@@ -465,10 +477,11 @@ export default {
         async handleFileDelete(key) {
             const toast = useToast();
             try {
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 const response = await api.delete(`/files/${id}`, {
                     data: {
-                        filePaths: [key]
+                        filePaths: [key],
+                        bucketName: this.selectedBucket
                     }
                 });
                 if (response.data.message === "Files deleted successfully") {
@@ -492,10 +505,11 @@ export default {
         async handleBulkDelete(fileKeys) {
             const toast = useToast();
             try {
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 const response = await api.delete(`/files/${id}`, {
                     data: {
-                        filePaths: fileKeys
+                        filePaths: fileKeys,
+                        bucketName: this.selectedBucket
                     },
                     headers: {
                         "authorization": `Bearer ${localStorage.getItem('token')}`
