@@ -185,11 +185,6 @@
                                             :title="`Preview ${item.name}`" :disabled="disabled">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <!-- <button v-if="editingFile !== item.key" type="button"
-                                            class="btn btn-sm btn-outline-primary" @click="startRename(item)"
-                                            :title="`Rename ${item.type === 'folder' ? 'folder' : 'file'}`">
-                                            <i class="fas fa-edit"></i>
-                                        </button> -->
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                             @click="deleteItem(item.key)"
                                             :title="`Delete ${item.type === 'folder' ? 'folder' : 'file'}`">
@@ -200,16 +195,6 @@
                                             :title="`Download ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-download"></i>
                                         </button>
-                                        <!-- <div v-if="editingFile === item.key" class="d-flex gap-1">
-                                            <button type="button" class="btn btn-sm btn-success"
-                                                @click="saveRename(item.id)" title="Save changes">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-secondary" @click="cancelRename"
-                                                title="Cancel">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div> -->
                                     </div>
                                 </td>
                                 <td class="col-copy align-middle text-center">
@@ -510,27 +495,7 @@ export default {
 
             return iconMap[extension] || 'fas fa-file text-muted'
         },
-        // startRename(item) {
-        //     this.editingFile = item.key
-        //     this.editingName = item.name
-        // },
-        // cancelRename() {
-        //     this.editingFile = null
-        //     this.editingName = ''
-        // },
-        // saveRename(oldKey) {
-        //     if (this.editingName.trim()) {
-        //         if (this.currentPath === '') {
-        //             this.newKey = this.editingName.trim()
-        //         } else {
-        //             this.newKey = this.currentPath + '/' + this.editingName.trim()
-        //         }
-        //         console.log('Renaming item:', oldKey, 'to', this.newKey)
-        //         this.$emit('fileRename', oldKey, this.newKey)
-        //     }
-        //     this.editingFile = null
-        //     this.editingName = ''
-        // },
+
         deleteItem(key) {
             if (confirm(`Are you sure you want to delete this file?`)) {
                 this.$emit('fileDelete', key)
