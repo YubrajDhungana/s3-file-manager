@@ -148,28 +148,10 @@ export default {
         };
     },
     mounted() {
-        //this.authStatus();
         this.loadAccounts();
     },
     methods: {
-        // async authStatus() {
-        //     console.log(" the auth status method is called")
-        //     try {
-        //         const response = await api.get('/auth/check-auth');
-        //         console.log("auth status response: ", response.data);
-        //         if (response.data.authenticated) {
-        //             this.currentUser = {
-        //                 name: response.data.name || '',
-        //                 email: response.data.email || ''
-        //             }
-        //         }
-        //         console.log("current user: ", this.currentUser);
-        //     } catch (error) {
-        //         if (error.response?.status === 401) {
-        //             this.$router.push({ name: 'Login' });
-        //         }
-        //     }
-        // },
+        
 
         async handleLogout() {
             const toast = useToast();

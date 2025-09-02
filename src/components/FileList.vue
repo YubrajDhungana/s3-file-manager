@@ -135,12 +135,12 @@
                                     <div class="d-flex align-items-center">
                                         <i :class="getItemIcon(item.type, item.type === 'folder', item.name)"
                                             class="item-icon"></i>
-                                        <div v-if="editingFile === item.key" class="flex-grow-1">
+                                        <!-- <div v-if="editingFile === item.key" class="flex-grow-1">
                                             <input v-model="editingName" type="text"
                                                 class="form-control form-control-sm" @keyup.enter="saveRename(item.key)"
                                                 @keyup.escape="cancelRename" @blur="saveRename(item.key)" />
-                                        </div>
-                                        <div v-else class="flex-grow-1">
+                                        </div> -->
+                                        <div class="flex-grow-1">
                                             <!-- File: Show as clickable link -->
                                             <a v-if="item.type === 'file'" :href="item.url" target="_blank"
                                                 rel="noopener noreferrer"
@@ -180,27 +180,27 @@
                                 <td class="col-actions align-middle text-center">
                                     <div v-if="item.type === 'folder'" class="text-muted">-</div>
                                     <div v-else class="action-buttons">
-                                        <button v-if="editingFile !== item.key && item.type === 'file'" type="button"
+                                        <button v-if="item.type === 'file'" type="button"
                                             class="btn btn-sm btn-outline-info" @click="previewFile(item)"
                                             :title="`Preview ${item.name}`" :disabled="disabled">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button v-if="editingFile !== item.key" type="button"
+                                        <!-- <button v-if="editingFile !== item.key" type="button"
                                             class="btn btn-sm btn-outline-primary" @click="startRename(item)"
                                             :title="`Rename ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button v-if="editingFile !== item.key" type="button"
-                                            class="btn btn-sm btn-outline-danger" @click="deleteItem(item.key)"
+                                        </button> -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                            @click="deleteItem(item.key)"
                                             :title="`Delete ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                        <button v-if="editingFile !== item.key" type="button"
-                                            class="btn btn-sm btn-outline-secondary" @click="downloadItem(item)"
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            @click="downloadItem(item)"
                                             :title="`Download ${item.type === 'folder' ? 'folder' : 'file'}`">
                                             <i class="fas fa-download"></i>
                                         </button>
-                                        <div v-if="editingFile === item.key" class="d-flex gap-1">
+                                        <!-- <div v-if="editingFile === item.key" class="d-flex gap-1">
                                             <button type="button" class="btn btn-sm btn-success"
                                                 @click="saveRename(item.id)" title="Save changes">
                                                 <i class="fas fa-check"></i>
@@ -209,7 +209,7 @@
                                                 title="Cancel">
                                                 <i class="fas fa-times"></i>
                                             </button>
-                                        </div>
+                                        </div> -->
                                     </div>
                                 </td>
                                 <td class="col-copy align-middle text-center">
@@ -304,8 +304,6 @@ export default {
     data() {
         return {
             selectedItems: [],
-            editingFile: null,
-            editingName: '',
             newKey: null,
             currentPage: 1,
             itemsPerPage: 10,
@@ -512,27 +510,27 @@ export default {
 
             return iconMap[extension] || 'fas fa-file text-muted'
         },
-        startRename(item) {
-            this.editingFile = item.key
-            this.editingName = item.name
-        },
-        cancelRename() {
-            this.editingFile = null
-            this.editingName = ''
-        },
-        saveRename(oldKey) {
-            if (this.editingName.trim()) {
-                if (this.currentPath === '') {
-                    this.newKey = this.editingName.trim()
-                } else {
-                    this.newKey = this.currentPath + '/' + this.editingName.trim()
-                }
-                console.log('Renaming item:', oldKey, 'to', this.newKey)
-                this.$emit('fileRename', oldKey, this.newKey)
-            }
-            this.editingFile = null
-            this.editingName = ''
-        },
+        // startRename(item) {
+        //     this.editingFile = item.key
+        //     this.editingName = item.name
+        // },
+        // cancelRename() {
+        //     this.editingFile = null
+        //     this.editingName = ''
+        // },
+        // saveRename(oldKey) {
+        //     if (this.editingName.trim()) {
+        //         if (this.currentPath === '') {
+        //             this.newKey = this.editingName.trim()
+        //         } else {
+        //             this.newKey = this.currentPath + '/' + this.editingName.trim()
+        //         }
+        //         console.log('Renaming item:', oldKey, 'to', this.newKey)
+        //         this.$emit('fileRename', oldKey, this.newKey)
+        //     }
+        //     this.editingFile = null
+        //     this.editingName = ''
+        // },
         deleteItem(key) {
             if (confirm(`Are you sure you want to delete this file?`)) {
                 this.$emit('fileDelete', key)
@@ -636,7 +634,6 @@ export default {
 .table {
     margin-bottom: 0;
     min-width: 800px;
-    /* Minimum width to enable horizontal scrolling */
 }
 
 .table-header-sticky {
@@ -655,7 +652,6 @@ export default {
     white-space: nowrap;
 }
 
-/* Column width definitions */
 .col-checkbox {
     width: 50px;
     min-width: 50px;
@@ -743,7 +739,6 @@ export default {
     font-size: 0.75rem;
 }
 
-/* Custom button styling for search area */
 .search-btn,
 .clear-btn {
     min-width: 80px;
@@ -754,7 +749,6 @@ export default {
     width: 100%;
 }
 
-/* Custom scrollbar for webkit browsers */
 .table-scroll-container::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -778,11 +772,11 @@ export default {
     background: #f1f1f1;
 }
 
-/* Responsive adjustments */
+
 @media (max-width: 768px) {
     .table {
         min-width: 600px;
-        /* Smaller minimum width on mobile */
+
     }
 
     .col-name {
