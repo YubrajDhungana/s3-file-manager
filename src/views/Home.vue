@@ -82,12 +82,12 @@
                                 Files
                                 <span class="badge bg-secondary ms-2">{{ currentItems?.length }}</span>
                             </h5>
-                            <FileList ref="fileList" :items="currentItems" @file-rename="handleFileRename"
-                                @file-delete="handleFileDelete" :current-path="currentPath" :loading="loading"
-                                :is-truncated="isTruncated" @load-data="handleLoadData"
-                                @folder-double-click="handleFolderDoubleClick" @bulk-delete="handleBulkDelete"
-                                :disabled="!selectedBucket || !selectedAccount" @search="handleSearch"
-                                @file-download="handleFileDownload" @path-change="handlePathChange" />
+                            <FileList ref="fileList" :items="currentItems" @file-delete="handleFileDelete"
+                                :current-path="currentPath" :loading="loading" :is-truncated="isTruncated"
+                                @load-data="handleLoadData" @folder-double-click="handleFolderDoubleClick"
+                                @bulk-delete="handleBulkDelete" :disabled="!selectedBucket || !selectedAccount"
+                                @search="handleSearch" @file-download="handleFileDownload"
+                                @path-change="handlePathChange" />
                         </div>
                     </div>
 
@@ -151,7 +151,7 @@ export default {
         this.loadAccounts();
     },
     methods: {
-        
+
 
         async handleLogout() {
             const toast = useToast();
@@ -425,32 +425,6 @@ export default {
             console.log("new path", this.currentPath)
             this.loadFolderContents({ path: this.currentPath })
         },
-
-        async handleFileRename(oldKey, newKey) {
-            const toast = useToast();
-            try {
-                const id = this.selectedAccount;
-                const response = await api.patch(`/files/${id}/rename`, {
-                    oldKey: oldKey,
-                    newKey: newKey,
-                    bucketName: this.selectedBucket
-                });
-                if (response.data.message) {
-                    toast.success(response.data.message);
-                }
-                this.loadFolderContents({ path: this.currentPath });
-            } catch (error) {
-                if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
-                    alert("session expired.Please login again");
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    this.$router.push({ name: 'Login' });
-                } else {
-                    console.log("Error renaming file:", error);
-                }
-            }
-        },
-
         async handleFileDelete(key) {
             const toast = useToast();
             try {

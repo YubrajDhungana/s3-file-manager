@@ -300,7 +300,7 @@ export default {
         }
 
     },
-    emits: ['fileRename', 'fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'fileDownload', 'pathChange'],
+    emits: ['fileDelete', 'folderDoubleClick', 'bulkDelete', 'loadData', 'search', 'fileDownload', 'pathChange'],
     data() {
         return {
             selectedItems: [],
