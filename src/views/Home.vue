@@ -256,7 +256,6 @@ export default {
                     this.$router.push({ name: 'Login' });
                 } else {
                     console.error("Error loading buckets:", error);
-                    alert("Error loading buckets. Please try again.");
                 }
                 this.buckets = [];
 
@@ -292,8 +291,6 @@ export default {
                     this.currentItems = response.data.items;
                     this.isTruncated = response.data.isTruncated;
                     this.nextContinuationToken = response.data.continuationToken || '';
-                    console.log("current path", this.currentPath);
-                    console.log("Loaded folder contents:", this.currentItems);
                 }
             } catch (error) {
                 if (error.response.data.message === "Invalid token" || error.response?.status === 401) {
@@ -301,7 +298,6 @@ export default {
                     this.$router.push({ name: 'Login' });
                 } else {
                     console.error("Error loading folder contents:", error);
-                    alert("Error loading folder contents.");
                 }
 
             } finally {
@@ -368,7 +364,7 @@ export default {
                 Array.from(uploadedFiles).forEach(file => {
                     formData.append('files', file);
                 });
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 let uploadPath = '';
                 if (this.currentPath) {
                     if (this.currentPath === '/') {
@@ -378,6 +374,7 @@ export default {
                     }
                 }
                 //const uploadPath = this.currentPath ? `${this.currentPath}/` : '';
+                formData.append('bucketName', this.selectedBucket);
                 formData.append('key', uploadPath)
                 console.log("Uploading files to path:", uploadPath);
                 await api.post(`/files/${id}/upload`, formData, {
@@ -450,10 +447,11 @@ export default {
         async handleFileRename(oldKey, newKey) {
             const toast = useToast();
             try {
-                const id = this.selectedBucket;
+                const id = this.selectedAccount;
                 const response = await api.patch(`/files/${id}/rename`, {
                     oldKey: oldKey,
                     newKey: newKey,
+                    bucketName: this.selectedBucket
                 });
                 if (response.data.message) {
                     toast.success(response.data.message);
@@ -466,10 +464,7 @@ export default {
                     localStorage.removeItem('user');
                     this.$router.push({ name: 'Login' });
                 } else {
-
-
                     console.log("Error renaming file:", error);
-                    alert("Error renaming file.");
                 }
             }
         },
@@ -496,7 +491,6 @@ export default {
                     this.$router.push({ name: 'Login' });
                 } else {
                     console.error("Error deleting file:", error);
-                    alert("Error deleting file.");
                 }
 
             }
