@@ -15,15 +15,25 @@
                             role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user-circle me-2"></i>
                             {{ currentUser.name }}
+                            <span v-if="isSuperAdmin" class="badge bg-info-subtle ms-2 text-dark">Super Admin</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li>
                                 <span class="dropdown-item-text">
                                     <small class="text-muted">{{ currentUser.email }}</small>
+                                    <br>
+                                    <small v-if="currentUser.userType" class="text-info">{{
+                                        currentUser.userType }}</small>
                                 </span>
                             </li>
                             <li>
                                 <hr class="dropdown-divider">
+                            </li>
+                            <li v-if="isSuperAdmin">
+                                <button class="dropdown-item" @click="toggleAdminPanel">
+                                    <i class="fas fa-cog me-2"></i>
+                                    {{ showAdminPanel ? 'Hide Admin' : 'Admin Panel' }}
+                                </button>
                             </li>
                             <li>
                                 <button class="dropdown-item" @click="handleLogout">
@@ -39,6 +49,8 @@
 
         <!-- Main Content -->
         <div class="container-fluid py-4">
+            <AdminPanel v-if="showAdminPanel && isSuperAdmin" :is-super-admin="isSuperAdmin" :accounts="accounts"
+                :buckets="buckets" />
             <div class="row">
                 <!-- Sidebar -->
                 <div class="col-lg-3 col-md-4 mb-4">
@@ -114,6 +126,7 @@ import BucketSelector from "../components/BucketSelector.vue";
 import FileUpload from "../components/FileUpload.vue";
 import FileList from "../components/FileList.vue";
 import FolderNavigation from "../components/FolderNavigation.vue";
+import AdminPanel from "@/components/AdminPanel.vue";
 import api from '../utils/api'
 import { useToast } from "vue-toastification";
 export default {
@@ -123,7 +136,8 @@ export default {
         BucketSelector,
         FileUpload,
         FileList,
-        FolderNavigation
+        FolderNavigation,
+        AdminPanel
     },
     data() {
         return {
@@ -143,15 +157,25 @@ export default {
             loadingAccounts: false,
             currentUser: {
                 name: '',
-                email: ''
+                email: '',
+                userType: '',
+                isSuperAdmin: false
             },
+            showAdminPanel: false
         };
+    },
+    computed: {
+        isSuperAdmin() {
+            return this.currentUser.isSuperAdmin;
+        }
     },
     mounted() {
         this.loadAccounts();
     },
     methods: {
-
+        toggleAdminPanel() {
+            this.showAdminPanel = !this.showAdminPanel;
+        },
 
         async handleLogout() {
             const toast = useToast();
@@ -200,7 +224,9 @@ export default {
                 if (this.$route.meta.user) {
                     this.currentUser = {
                         name: this.$route.meta.user.name || '',
-                        email: this.$route.meta.user.email || ''
+                        email: this.$route.meta.user.email || '',
+                        userType: this.$route.meta.user.user_type || 'user',
+                        isSuperAdmin: this.$route.meta.user.user_type === 'superadmin' || false
                     }
                 }
 
@@ -229,7 +255,6 @@ export default {
                     return;
                 }
                 const response = await api.get(`/buckets/${id}/list-buckets`);
-                console.log("Buckets response:", response.data);
                 this.buckets = response.data || [];
             } catch (error) {
                 console.error("Error loading buckets:", error);
@@ -533,5 +558,9 @@ export default {
 
 .nav-link:hover {
     color: rgba(255, 255, 255, 1) !important;
+}
+
+.admin-panel-section {
+    margin-bottom: 2rem;
 }
 </style>
