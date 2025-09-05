@@ -36,10 +36,16 @@
                             <i class="fas fa-user-tag me-2"></i>
                             Role Management
                         </h5>
-                        <button class="btn btn-primary btn-sm" @click="showCreateRoleModal">
-                            <i class="fas fa-plus me-1"></i>
-                            Create Role
-                        </button>
+                        <div>
+                            <button class="btn btn-primary btn-sm me-2" @click="showCreateRoleModal">
+                                <i class="fas fa-plus me-1"></i>
+                                Create Role
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @click="showManageBucketsModal">
+                                <i class="fas fa-trash me-1"></i>
+                                Manage Buckets
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -119,7 +125,7 @@
                                         <td>{{ user.email }}</td>
                                         <td>
                                             <span v-if="user.role_name" class="badge bg-primary">{{ user.role_name
-                                            }}</span>
+                                                }}</span>
                                             <span v-else class="text-muted">No role assigned</span>
                                         </td>
                                         <td>
@@ -262,6 +268,69 @@
                 </div>
             </div>
         </div>
+
+        <!-- Manage Role Buckets Modal -->
+        <div class="modal fade" id="manageBucketsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Manage Role Buckets</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <label class="form-label">Select Role</label>
+                            <select v-model="selectedRoleForBucketManagement" class="form-select"
+                                @change="loadRoleBuckets">
+                                <option value="">Choose a role...</option>
+                                <option v-for="role in roles" :key="role.role_id" :value="role.role_id">
+                                    {{ role.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div v-if="selectedRoleForBucketManagement && roleBucketsLoading" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                            <p class="mt-2">Loading buckets...</p>
+                        </div>
+
+                        <div v-if="selectedRoleForBucketManagement && !roleBucketsLoading"
+                            class="role-buckets-container">
+                            <h6 class="mb-3">Assigned Buckets</h6>
+
+                            <div v-if="roleBuckets.length === 0" class="alert alert-info">
+                                No buckets assigned to this role.
+                            </div>
+
+                            <div v-else class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Bucket Name</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="bucket in roleBuckets" :key="bucket.bucket_name">
+                                            <td>{{ bucket.bucket_name }}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                    @click="confirmDeleteBucket(bucket)" title="Remove Bucket">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -294,8 +363,15 @@ export default {
             isEditingRole: false,
             selectedUser: null,
             selectedRoleForUser: '',
+
+            // New data properties for bucket management
+            selectedRoleForBucketManagement: '',
+            roleBuckets: [],
+            roleBucketsLoading: false,
+
             roleModal: null,
-            assignRoleModal: null
+            assignRoleModal: null,
+            manageBucketsModal: null
         };
     },
     watch: {
@@ -327,6 +403,7 @@ export default {
         initializeModals() {
             this.roleModal = new Modal(document.getElementById('roleModal'));
             this.assignRoleModal = new Modal(document.getElementById('assignRoleModal'));
+            this.manageBucketsModal = new Modal(document.getElementById('manageBucketsModal'));
         },
 
         async fetchAccounts() {
@@ -341,6 +418,7 @@ export default {
                 console.log("error loading accounts")
             }
         },
+
         async fetchBuckets(id) {
             try {
                 const response = await api.get(`/buckets/${id}/s3-buckets`);
@@ -353,6 +431,7 @@ export default {
                 console.log("error fetching buckets")
             }
         },
+
         async loadUserData() {
             try {
                 const response = await api.get('/roles/get-users');
@@ -383,9 +462,61 @@ export default {
             this.roleModal.show();
         },
 
-        editRole(role) {
-            this.roleForm = { ...role };
-            this.roleModal.show();
+        showManageBucketsModal() {
+            this.selectedRoleForBucketManagement = '';
+            this.roleBuckets = [];
+            this.manageBucketsModal.show();
+        },
+
+        async loadRoleBuckets() {
+            if (!this.selectedRoleForBucketManagement) {
+                this.roleBuckets = [];
+                return;
+            }
+
+            this.roleBucketsLoading = true;
+            try {
+                const response = await api.get(`/roles/${this.selectedRoleForBucketManagement}/get-buckets`);
+                if (response.data && response.data.buckets) {
+                    this.roleBuckets = response.data.buckets;
+                } else {
+                    this.roleBuckets = [];
+                }
+            } catch (error) {
+                console.error("Error loading role buckets:", error);
+                this.roleBuckets = [];
+            } finally {
+                this.roleBucketsLoading = false;
+            }
+        },
+
+        confirmDeleteBucket(bucket) {
+            if (confirm(`Are you sure you want to remove bucket "${bucket.bucket_name}" from this role?`)) {
+                this.deleteBucketFromRole(bucket);
+            }
+        },
+
+        async deleteBucketFromRole(bucket) {
+            const toast = useToast();
+            try {
+                const response = await api.delete(
+                    `/roles/${this.selectedRoleForBucketManagement}/delete-bucket`,
+                    {
+                        params: {
+                            bucketName: bucket.bucket_name
+                        }
+                    }
+                );
+
+                if (response.data.message) {
+                    toast.success(response.data.message);
+                    this.loadRoleBuckets();
+                    this.loadRoleData();
+                }
+            } catch (error) {
+                console.error("Error deleting bucket from role:", error);
+                toast.error("Failed to remove bucket from role");
+            }
         },
 
         async saveRole() {
@@ -472,11 +603,7 @@ export default {
                 this.selectedRoleForUser = '';
                 this.assignRoleModal.hide();
             }
-
-
-
         },
-
     }
 };
 </script>
@@ -560,6 +687,11 @@ export default {
     color: #495057;
     font-weight: 600;
     margin: 0;
+}
+
+.role-buckets-container {
+    max-height: 400px;
+    overflow-y: auto;
 }
 </style>
 [file content end]
