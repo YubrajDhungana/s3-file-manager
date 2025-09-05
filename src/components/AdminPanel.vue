@@ -119,7 +119,7 @@
                                         <td>{{ user.email }}</td>
                                         <td>
                                             <span v-if="user.role_name" class="badge bg-primary">{{ user.role_name
-                                                }}</span>
+                                            }}</span>
                                             <span v-else class="text-muted">No role assigned</span>
                                         </td>
                                         <td>
@@ -313,7 +313,7 @@ export default {
             this.allBuckets = [];
             if (accountId) {
                 this.fetchBuckets(accountId);
-            } 
+            }
         }
     },
     mounted() {
@@ -406,6 +406,24 @@ export default {
             }
 
         },
+
+        async deleteRole(role) {
+            const roleId = role.role_id;
+            const toast = useToast();
+            try {
+                if (confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`) === false) {
+                    return;
+                }
+                const response = await api.delete(`/roles/${roleId}/delete-role`);
+                if (response.data.message) {
+                    toast.success(response.data.message);
+                    this.loadRoleData();
+                }
+            } catch (error) {
+                console.log("error deleteing role");
+            }
+        },
+
 
         manageRoleBuckets() {
             const bucketPermissionsTab = document.getElementById('bucket-permissions-tab');
