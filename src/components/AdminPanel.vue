@@ -59,7 +59,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="role in roles" :key="role.id">
+                                    <tr v-for="role in roles" :key="role.role_id">
                                         <td>
                                             <span class="badge bg-primary">{{ role.name }}</span>
                                         </td>
@@ -162,9 +162,10 @@
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <label class="form-label">Select Role</label>
-                                <select v-model="selectedRoleForBuckets" class="form-select">
+                                <select v-model="selectedRoleForBuckets" class="form-select"
+                                    @change="handleRoleSelection">
                                     <option value="">Choose a role...</option>
-                                    <option v-for="role in roles" :key="role.id" :value="role.role_id">
+                                    <option v-for="role in roles" :key="role.role_id" :value="role.role_id">
                                         {{ role.name }}
                                     </option>
                                 </select>
@@ -173,10 +174,17 @@
 
                         <div v-if="selectedRoleForBuckets" class="bucket-permissions-container">
                             <div class="row mb-4">
-                                <div class="col-md-6">
+                                <div v-if="loadingRoleSelection" class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-spinner fa-spin me-1"></i>
+                                        Loading accounts...
+                                    </small>
+                                </div>
+                                <div v-else class="col-md-6">
                                     <label class="form-label">Select Account</label>
-                                    <select v-model="selectedAccount" class="form-select">
-                                        <option value="">Choose a account</option>
+                                    <select v-model="selectedAccount" class="form-select"
+                                        @change="handleAccountSelection">
+                                        <option value="">Choose an account</option>
                                         <option v-for="account in accounts" :key="account.id" :value="account.id">
                                             {{ account.account_name }}
                                         </option>
@@ -186,7 +194,13 @@
                         </div>
                         <div v-if="selectedAccount" class="bucket-permissions-container">
                             <div class="row mb-4">
-                                <div class="col-md-6">
+                                <div v-if="loadingAccountSelection" class="mt-2">
+                                    <span class="text-muted">
+                                        <i class="fas fa-spinner fa-spin me-1"></i>
+                                        Loading buckets...
+                                    </span>
+                                </div>
+                                <div v-else class="col-md-6">
                                     <label class="form-label">Select bucket</label>
                                     <select v-model="selectedBucket" class="form-select">
                                         <option value="">Choose a bucket</option>
@@ -198,7 +212,7 @@
                             </div>
                         </div>
                         <div class="mt-3">
-                            <button class="btn btn-primary" @click="saveBucketPermissions">
+                            <button class="btn btn-primary" @click="saveBucketPermissions" :disabled="!selectedBucket">
                                 <i class="fas fa-save me-1"></i>
                                 Save Permissions
                             </button>
@@ -335,7 +349,7 @@
 </template>
 
 <script>
-import { Modal, Tab } from 'bootstrap/dist/js/bootstrap.bundle.min';
+import { Modal } from 'bootstrap/dist/js/bootstrap.bundle.min';
 import api from '@/utils/api';
 import { useToast } from "vue-toastification";
 
@@ -360,37 +374,23 @@ export default {
             roleForm: {
                 name: '',
             },
-            isEditingRole: false,
             selectedUser: null,
             selectedRoleForUser: '',
 
-            // New data properties for bucket management
+            //  for bucket management
             selectedRoleForBucketManagement: '',
             roleBuckets: [],
             roleBucketsLoading: false,
 
+            //  for bucket permissions tab
+            loadingRoleSelection: false,
+            loadingAccountSelection: false,
+
+            // Modals
             roleModal: null,
             assignRoleModal: null,
             manageBucketsModal: null
         };
-    },
-    watch: {
-        selectedRoleForBuckets(newRoleId) {
-            this.selectedAccount = '';
-            this.selectedBucket = '';
-            this.accounts = [];
-            this.allBuckets = [];
-            if (newRoleId) {
-                this.fetchAccounts();
-            }
-        },
-        selectedAccount(accountId) {
-            this.selectedBucket = '';
-            this.allBuckets = [];
-            if (accountId) {
-                this.fetchBuckets(accountId);
-            }
-        }
     },
     mounted() {
         if (this.isSuperAdmin) {
@@ -450,8 +450,7 @@ export default {
                     role_id: role.role_id,
                     name: role.role_name,
                     buckets: role.buckets ? role.buckets.split(',') : []
-                }))
-                console.log(response);
+                }));
             } catch (error) {
                 console.log(error)
             }
@@ -490,6 +489,40 @@ export default {
             }
         },
 
+        async handleRoleSelection() {
+            this.selectedAccount = '';
+            this.selectedBucket = '';
+            this.accounts = [];
+            this.allBuckets = [];
+
+            if (this.selectedRoleForBuckets) {
+                this.loadingRoleSelection = true;
+                try {
+                    await this.fetchAccounts();
+                } catch (error) {
+                    console.error("Error loading accounts:", error);
+                } finally {
+                    this.loadingRoleSelection = false;
+                }
+            }
+        },
+
+        async handleAccountSelection() {
+            this.selectedBucket = '';
+            this.allBuckets = [];
+
+            if (this.selectedAccount) {
+                this.loadingAccountSelection = true;
+                try {
+                    await this.fetchBuckets(this.selectedAccount);
+                } catch (error) {
+                    console.error("Error loading buckets:", error);
+                } finally {
+                    this.loadingAccountSelection = false;
+                }
+            }
+        },
+
         confirmDeleteBucket(bucket) {
             if (confirm(`Are you sure you want to remove bucket "${bucket.bucket_name}" from this role?`)) {
                 this.deleteBucketFromRole(bucket);
@@ -514,8 +547,8 @@ export default {
                     this.loadRoleData();
                 }
             } catch (error) {
-                console.error("Error deleting bucket from role:", error);
-                toast.error("Failed to remove bucket from role");
+                console.error("Error deleting bucket from role");
+
             }
         },
 
@@ -524,45 +557,35 @@ export default {
             try {
                 const response = await api.post('/roles/create-role', {
                     name: this.roleForm.name
-                })
+                });
                 if (response.data.message === 'Role created successfully') {
                     toast.success(response.data.message);
                     this.loadRoleData();
                 }
-
             } catch (error) {
                 console.log(error);
             } finally {
                 this.roleModal.hide();
             }
-
         },
 
         async deleteRole(role) {
             const roleId = role.role_id;
             const toast = useToast();
             try {
-                if (confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`) === false) {
+                if (confirm(`Are you sure you want to delete the role "${role.name}"? This will remove this role from all users. This action cannot be undone.`) === false) {
                     return;
                 }
                 const response = await api.delete(`/roles/${roleId}/delete-role`);
                 if (response.data.message) {
                     toast.success(response.data.message);
-                    this.loadRoleData();
+                    // Reload both roles and users to ensure UI consistency
+                    await Promise.all([this.loadRoleData(), this.loadUserData()]);
                 }
             } catch (error) {
-                console.log("error deleteing role");
+                console.log("error deleting role");
             }
         },
-
-
-        manageRoleBuckets() {
-            const bucketPermissionsTab = document.getElementById('bucket-permissions-tab');
-            if (bucketPermissionsTab) {
-                new Tab(bucketPermissionsTab).show();
-            }
-        },
-
 
         async saveBucketPermissions() {
             const toast = useToast();
@@ -570,22 +593,28 @@ export default {
                 if (this.selectedRoleForBuckets && this.selectedAccount && this.selectedBucket) {
                     const response = await api.post(`/roles/${this.selectedRoleForBuckets}/account/${this.selectedAccount}/buckets`, {
                         bucketName: this.selectedBucket
-                    })
+                    });
                     if (response.data.message) {
-                        toast.success(response.data.message)
+                        toast.success(response.data.message);
                         this.loadRoleData();
+                        // Reset form
+                        this.selectedRoleForBuckets = '';
+                        this.selectedAccount = '';
+                        this.selectedBucket = '';
                     }
                 } else {
-                    toast.error("all field selection are required");
+                    toast.error("All field selections are required");
                 }
             } catch (error) {
-                console.log("error assigning bucket to role")
+                console.log("error assigning bucket to role");
             }
         },
 
         assignRoleToUser(user) {
             this.selectedUser = user;
             this.userId = user.id;
+            // Pre-select the current role if user has one
+            this.selectedRoleForUser = user.role_id || '';
             this.assignRoleModal.show();
         },
 
@@ -692,6 +721,12 @@ export default {
 .role-buckets-container {
     max-height: 400px;
     overflow-y: auto;
+}
+
+/* Loading indicators for dropdowns */
+select:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.7;
 }
 </style>
 [file content end]
