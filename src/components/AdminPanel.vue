@@ -65,7 +65,10 @@
                                         </td>
                                         <td>{{ role.role_id }}</td>
                                         <td>
-                                            <span v-if="role.buckets.length === 0" class="text-muted">No buckets
+                                            <span v-if="role.name.toLowerCase() === 'admin'" class="text-success">
+                                                Full access to all buckets
+                                            </span>
+                                            <span v-else-if="role.buckets.length === 0" class="text-muted">No buckets
                                                 assigned</span>
                                             <div v-else class="bucket-tags">
                                                 <span v-for="bucket in role.buckets.slice(0, 3)" :key="bucket"
@@ -136,7 +139,8 @@
                                         </td>
                                         <td>
                                             <button class="btn btn-outline-primary btn-sm"
-                                                @click="assignRoleToUser(user)" title="Assign Role">
+                                                @click="assignRoleToUser(user)" title="Assign Role"
+                                                :disabled="!!user.role_name">
                                                 <i class="fas fa-user-tag me-1"></i>
                                                 Assign Role
                                             </button>
@@ -165,7 +169,8 @@
                                 <select v-model="selectedRoleForBuckets" class="form-select"
                                     @change="handleRoleSelection">
                                     <option value="">Choose a role...</option>
-                                    <option v-for="role in roles" :key="role.role_id" :value="role.role_id">
+                                    <option v-for="role in roles.filter(r => r.name.toLowerCase() !== 'admin')"
+                                        :key="role.role_id" :value="role.role_id">
                                         {{ role.name }}
                                     </option>
                                 </select>
