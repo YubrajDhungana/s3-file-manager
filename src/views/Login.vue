@@ -12,13 +12,6 @@
                                 <p class="text-muted">Sign in to your account</p>
                             </div>
 
-                            <!-- error message to show
-                            <div v-if="apiError" class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                {{ apiError }}
-                            </div> -->
-
-
                             <form @submit.prevent="handleLogin">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">
@@ -65,7 +58,7 @@
 </template>
 
 <script>
-import api from "@/utils/api"
+import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
 export default {
     name: 'LoginPage',
@@ -81,31 +74,23 @@ export default {
             errorTimeout: null,
         }
     },
+    setup() {
+        const authStore = useAuthStore();
+        const toast = useToast();
+        return {
+            authStore,
+            toast
+        }
+    },
     methods: {
         async handleLogin() {
-            const toast = useToast();
             try {
                 this.isSubmitting = true;
-                //this.clearApiError();
-                const response = await api.post('/auth/login', {
-                    email: this.form.email,
-                    password: this.form.password
-                });
-
-                const toastTimeout = 1500; 
-                toast.success(response.data?.message || "Logged in successfully!");
-                await new Promise(resolve => setTimeout(resolve, toastTimeout));
-
-                if (response.data) {
-                    this.$router.push({ name: 'Home' });
-                }
-
+                await this.authStore.login(this.form)
+                await new Promise((resolve) => setTimeout(resolve, 1500));
+                this.$router.push({ name: 'Home' })
             } catch (error) {
-                if (error.response?.data?.message) {
-                    toast.error(error.response.data.message);
-                } else {
-                    toast.error("Login failed. Please try again.");
-                }
+                console.error('Login error:', error)
             } finally {
                 this.isSubmitting = false;
             }

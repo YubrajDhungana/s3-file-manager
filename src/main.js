@@ -5,11 +5,12 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "./style.css";
 import router from "./routes";
 import Toast from "vue-toastification";
+import { createPinia } from "pinia";
 import "vue-toastification/dist/index.css";
 
 const app = createApp(App);
-
-//createApp(App).use(router).mount('#app')
+const pinia = createPinia()
+app.use(pinia)
 app.use(Toast, {
   position: "top-right",
   timeout: 1500,

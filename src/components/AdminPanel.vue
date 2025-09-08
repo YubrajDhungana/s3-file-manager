@@ -1,3 +1,5 @@
+[file name]: AdminPanel.vue
+[file content begin]
 <template>
     <div v-if="isSuperAdmin" class="admin-panel">
         <!-- Admin Tabs -->
@@ -37,13 +39,9 @@
                             Role Management
                         </h5>
                         <div>
-                            <button class="btn btn-primary btn-sm me-2" @click="showCreateRoleModal">
+                            <button class="btn btn-primary btn-sm" @click="showCreateRoleModal">
                                 <i class="fas fa-plus me-1"></i>
                                 Create Role
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" @click="showManageBucketsModal">
-                                <i class="fas fa-trash me-1"></i>
-                                Manage Buckets
                             </button>
                         </div>
                     </div>
@@ -82,7 +80,13 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-danger" @click="deleteRole(role)"
+                                                <button v-if="role.name.toLowerCase() !== 'admin'"
+                                                    class="btn btn-outline-info me-1"
+                                                    @click="showManageRoleBuckets(role)" title="Manage Buckets">
+                                                    <i class="fas fa-database"></i>
+                                                </button>
+                                                <button v-if="role.name.toLowerCase() !== 'admin'"
+                                                    class="btn btn-outline-danger" @click="deleteRole(role)"
                                                     title="Delete Role">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
@@ -293,28 +297,19 @@
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Manage Role Buckets</h5>
+                        <h5 class="modal-title">
+                            <i class="fas fa-database me-2"></i>
+                            Manage Buckets for: {{ selectedRoleForBucketManagement?.name }}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-4">
-                            <label class="form-label">Select Role</label>
-                            <select v-model="selectedRoleForBucketManagement" class="form-select"
-                                @change="loadRoleBuckets">
-                                <option value="">Choose a role...</option>
-                                <option v-for="role in roles" :key="role.role_id" :value="role.role_id">
-                                    {{ role.name }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <div v-if="selectedRoleForBucketManagement && roleBucketsLoading" class="text-center py-4">
+                        <div v-if="roleBucketsLoading" class="text-center py-4">
                             <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
                             <p class="mt-2">Loading buckets...</p>
                         </div>
 
-                        <div v-if="selectedRoleForBucketManagement && !roleBucketsLoading"
-                            class="role-buckets-container">
+                        <div v-if="!roleBucketsLoading" class="role-buckets-container">
                             <h6 class="mb-3">Assigned Buckets</h6>
 
                             <div v-if="roleBuckets.length === 0" class="alert alert-info">
@@ -382,12 +377,12 @@ export default {
             selectedUser: null,
             selectedRoleForUser: '',
 
-            //  for bucket management
-            selectedRoleForBucketManagement: '',
+            // For bucket management
+            selectedRoleForBucketManagement: null,
             roleBuckets: [],
             roleBucketsLoading: false,
 
-            //  for bucket permissions tab
+            // For bucket permissions tab
             loadingRoleSelection: false,
             loadingAccountSelection: false,
 
@@ -466,9 +461,10 @@ export default {
             this.roleModal.show();
         },
 
-        showManageBucketsModal() {
-            this.selectedRoleForBucketManagement = '';
+        showManageRoleBuckets(role) {
+            this.selectedRoleForBucketManagement = role;
             this.roleBuckets = [];
+            this.loadRoleBuckets();
             this.manageBucketsModal.show();
         },
 
@@ -480,7 +476,7 @@ export default {
 
             this.roleBucketsLoading = true;
             try {
-                const response = await api.get(`/roles/${this.selectedRoleForBucketManagement}/get-buckets`);
+                const response = await api.get(`/roles/${this.selectedRoleForBucketManagement.role_id}/get-buckets`);
                 if (response.data && response.data.buckets) {
                     this.roleBuckets = response.data.buckets;
                 } else {
@@ -538,7 +534,7 @@ export default {
             const toast = useToast();
             try {
                 const response = await api.delete(
-                    `/roles/${this.selectedRoleForBucketManagement}/delete-bucket`,
+                    `/roles/${this.selectedRoleForBucketManagement.role_id}/delete-bucket`,
                     {
                         params: {
                             bucketName: bucket.bucket_name
@@ -553,7 +549,6 @@ export default {
                 }
             } catch (error) {
                 console.error("Error deleting bucket from role");
-
             }
         },
 
@@ -584,7 +579,6 @@ export default {
                 const response = await api.delete(`/roles/${roleId}/delete-role`);
                 if (response.data.message) {
                     toast.success(response.data.message);
-                    // Reload both roles and users to ensure UI consistency
                     await Promise.all([this.loadRoleData(), this.loadUserData()]);
                 }
             } catch (error) {
@@ -602,7 +596,6 @@ export default {
                     if (response.data.message) {
                         toast.success(response.data.message);
                         this.loadRoleData();
-                        // Reset form
                         this.selectedRoleForBuckets = '';
                         this.selectedAccount = '';
                         this.selectedBucket = '';
@@ -618,7 +611,6 @@ export default {
         assignRoleToUser(user) {
             this.selectedUser = user;
             this.userId = user.id;
-            // Pre-select the current role if user has one
             this.selectedRoleForUser = user.role_id || '';
             this.assignRoleModal.show();
         },
@@ -692,7 +684,7 @@ export default {
 }
 
 .form-check-input {
-    margin-left: -2rem;
+    moved-left: -2rem;
 }
 
 .modal-content {
@@ -728,10 +720,22 @@ export default {
     overflow-y: auto;
 }
 
-/* Loading indicators for dropdowns */
+
 select:disabled {
     background-color: #f8f9fa;
     opacity: 0.7;
+}
+
+
+.btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+
+.btn-outline-info:hover {
+    color: #000;
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
 }
 </style>
 [file content end]
