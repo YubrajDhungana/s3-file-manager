@@ -1,5 +1,3 @@
-[file name]: AdminPanel.vue
-[file content begin]
 <template>
     <div v-if="isSuperAdmin" class="admin-panel">
         <!-- Admin Tabs -->
@@ -103,11 +101,15 @@
             <!-- Users Tab -->
             <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab">
                 <div class="card card-custom">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-users me-2"></i>
                             User Management
                         </h5>
+                        <button class="btn btn-primary btn-sm" @click="showCreateUserModal">
+                            <i class="fas fa-plus me-1"></i>
+                            Add User
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -142,12 +144,17 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-outline-primary btn-sm"
-                                                @click="assignRoleToUser(user)" title="Assign Role"
-                                                :disabled="!!user.role_name">
-                                                <i class="fas fa-user-tag me-1"></i>
-                                                Assign Role
-                                            </button>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary me-1"
+                                                    @click="assignRoleToUser(user)" title="Assign Role"
+                                                    :disabled="!!user.role_name">
+                                                    <i class="fas fa-user-tag"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger" @click="deleteUser(user)"
+                                                    title="Delete User">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -254,7 +261,49 @@
                             </div>
                         </form>
                     </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Create User Modal -->
+        <div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="createUser">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" class="form-control" v-model="userForm.name" required
+                                    placeholder="Enter user's full name">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-control" v-model="userForm.email" required
+                                    placeholder="Enter user's email">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" v-model="userForm.password" required
+                                    placeholder="Enter password" minlength="6">
+                                <div class="form-text">Password must be at least 6 characters long</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" v-model="userForm.confirmPassword" required
+                                    placeholder="Confirm password">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary" :disabled="!isFormValid">
+                                    Create User
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -374,23 +423,39 @@ export default {
             roleForm: {
                 name: '',
             },
+            userForm: {
+                name: '',
+                email: '',
+                password: '',
+                confirmPassword: ''
+            },
             selectedUser: null,
             selectedRoleForUser: '',
 
-            // For bucket management
+
             selectedRoleForBucketManagement: null,
             roleBuckets: [],
             roleBucketsLoading: false,
 
-            // For bucket permissions tab
+
             loadingRoleSelection: false,
             loadingAccountSelection: false,
 
-            // Modals
+
             roleModal: null,
+            createUserModal: null,
             assignRoleModal: null,
             manageBucketsModal: null
         };
+    },
+    computed: {
+        isFormValid() {
+            return this.userForm.name &&
+                this.userForm.email &&
+                this.userForm.password &&
+                this.userForm.password === this.userForm.confirmPassword &&
+                this.userForm.password.length >= 6;
+        }
     },
     mounted() {
         if (this.isSuperAdmin) {
@@ -402,6 +467,7 @@ export default {
     methods: {
         initializeModals() {
             this.roleModal = new Modal(document.getElementById('roleModal'));
+            this.createUserModal = new Modal(document.getElementById('createUserModal'));
             this.assignRoleModal = new Modal(document.getElementById('assignRoleModal'));
             this.manageBucketsModal = new Modal(document.getElementById('manageBucketsModal'));
         },
@@ -459,6 +525,16 @@ export default {
         showCreateRoleModal() {
             this.roleForm = { name: '' };
             this.roleModal.show();
+        },
+
+        showCreateUserModal() {
+            this.userForm = {
+                name: '',
+                email: '',
+                password: '',
+                confirmPassword: ''
+            };
+            this.createUserModal.show();
         },
 
         showManageRoleBuckets(role) {
@@ -549,6 +625,46 @@ export default {
                 }
             } catch (error) {
                 console.error("Error deleting bucket from role");
+            }
+        },
+
+        async createUser() {
+            const toast = useToast();
+            try {
+                // This will be replaced with actual API call
+                console.log('Creating user:', this.userForm);
+                const result = await api.post('/accounts/add-user', {
+                    name: this.userForm.name,
+                    email: this.userForm.email,
+                    password: this.userForm.password
+                });
+
+                if (result.data.message) {
+                    toast.success(result.data.message);
+                    this.loadUserData();
+                    this.createUserModal.hide();
+                }
+            } catch (error) {
+                console.log("error creating user");
+                toast.error('Failed to create user');
+            }
+        },
+
+        async deleteUser(user) {
+            const toast = useToast();
+            try {
+                if (confirm(`Are you sure you want to delete user "${user.name}"? This action cannot be undone.`) === false) {
+                    return;
+                }
+                console.log('Deleting user:', user.id);
+                const response = await api.delete(`/accounts/delete-user/${user.id}`);
+                if (response.data.message) {
+                    toast.success('User deleted successfully!');
+                    this.loadUserData();
+                }
+            } catch (error) {
+                console.log("error deleting user");
+                toast.error('Failed to delete user');
             }
         },
 
@@ -720,12 +836,10 @@ export default {
     overflow-y: auto;
 }
 
-
 select:disabled {
     background-color: #f8f9fa;
     opacity: 0.7;
 }
-
 
 .btn-outline-info {
     color: #0dcaf0;
@@ -738,4 +852,3 @@ select:disabled {
     border-color: #0dcaf0;
 }
 </style>
-[file content end]
