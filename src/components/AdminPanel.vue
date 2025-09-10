@@ -799,9 +799,6 @@ export default {
     padding-left: 2rem;
 }
 
-.form-check-input {
-    moved-left: -2rem;
-}
 
 .modal-content {
     border: none;

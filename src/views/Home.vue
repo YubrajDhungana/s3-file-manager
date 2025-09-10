@@ -14,19 +14,15 @@
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
                             role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user-circle me-2"></i>
-                            <!-- {{ currentUser.name }} -->
-                            {{ authStore.user?.name || 'User' }}
+                            {{ currentUser.name }}
                             <span v-if="isSuperAdmin" class="badge bg-info-subtle ms-2 text-dark">Super Admin</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li>
                                 <span class="dropdown-item-text">
-                                    <!-- <small class="text-muted">{{ currentUser.email }}</small> -->
-                                    <small class="text-muted">{{ authStore.user?.email }}</small>
+                                    <small class="text-muted">{{ currentUser.email }}</small>
                                     <br>
-                                    <!-- <small v-if="currentUser.userType" class="text-info">{{currentUser.userType }}</small> -->
-                                    <small v-if="authStore.user?.user_type" class="text-info">{{
-                                        authStore.user.user_type }}</small>
+                                    <small v-if="currentUser.userType" class="text-info">{{currentUser.userType }}</small>
                                 </span>
                             </li>
                             <li>
@@ -131,7 +127,6 @@ import FileList from "../components/FileList.vue";
 import FolderNavigation from "../components/FolderNavigation.vue";
 import AdminPanel from "@/components/AdminPanel.vue";
 import api from '../utils/api'
-import { useAuthStore } from '@/stores/auth'
 import { useToast } from "vue-toastification";
 export default {
     name: "HomePage",
@@ -159,21 +154,18 @@ export default {
             perPage: 10,
             loadingBuckets: false,
             loadingAccounts: false,
+            currentUser: {
+                name: '',
+                email: '',
+                userType: '',
+                isSuperAdmin: false
+            },
             showAdminPanel: false
         };
     },
-    setup() {
-        const authStore = useAuthStore()
-        const toast = useToast()
-
-        return {
-            authStore,
-            toast
-        }
-    },
     computed: {
         isSuperAdmin() {
-            return this.authStore.user?.user_type === 'superadmin';
+            return this.currentUser.isSuperAdmin;
         }
     },
     mounted() {
@@ -185,22 +177,19 @@ export default {
         },
 
         async handleLogout() {
-            // const toast = useToast();
-            // try {
-            //     if (confirm('Are you sure you want to logout?')) {
-            //         await api.post('/auth/logout')
-            //         toast.success("Logged out successfully");
-            //         this.$router.push({ name: 'Login' });
-            //     }
-            // } catch (error) {
-            //     if (error.response?.status === 401) {
-            //         this.$router.push({ name: 'Login' });
-            //     } else {
-            //         toast.error("Logout failed. Please try again.");
-            //     }
-            // }
-            if (confirm('Are you sure you want to logout?')) {
-                await this.authStore.logout()
+            const toast = useToast();
+            try {
+                if (confirm('Are you sure you want to logout?')) {
+                    await api.post('/auth/logout')
+                    toast.success("Logged out successfully");
+                    this.$router.push({ name: 'Login' });
+                }
+            } catch (error) {
+                if (error.response?.status === 401) {
+                    this.$router.push({ name: 'Login' });
+                } else {
+                    toast.error("Logout failed. Please try again.");
+                }
             }
         },
 
@@ -230,6 +219,14 @@ export default {
         async loadAccounts() {
             const toast = useToast();
             try {
+                if (this.$route.meta.user) {
+                    this.currentUser = {
+                        name: this.$route.meta.user.name || '',
+                        email: this.$route.meta.user.email || '',
+                        userType: this.$route.meta.user.user_type || 'user',
+                        isSuperAdmin: this.$route.meta.user.user_type === 'superadmin' || false
+                    }
+                }
                 this.loadingAccounts = true;
                 const response = await api.get('/accounts/');
                 this.accounts = response.data || []

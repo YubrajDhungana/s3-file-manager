@@ -58,7 +58,7 @@
 </template>
 
 <script>
-import { useAuthStore } from "@/stores/auth";
+import api from "@/utils/api"
 import { useToast } from "vue-toastification";
 export default {
     name: 'LoginPage',
@@ -74,23 +74,32 @@ export default {
             errorTimeout: null,
         }
     },
-    setup() {
-        const authStore = useAuthStore();
-        const toast = useToast();
-        return {
-            authStore,
-            toast
-        }
-    },
+    
     methods: {
         async handleLogin() {
+           const toast = useToast();
             try {
                 this.isSubmitting = true;
-                await this.authStore.login(this.form)
-                await new Promise((resolve) => setTimeout(resolve, 1500));
-                this.$router.push({ name: 'Home' })
+                //this.clearApiError();
+                const response = await api.post('/auth/login', {
+                    email: this.form.email,
+                    password: this.form.password
+                });
+
+                const toastTimeout = 1500; 
+                toast.success(response.data?.message || "Logged in successfully!");
+                await new Promise(resolve => setTimeout(resolve, toastTimeout));
+
+                if (response.data) {
+                    this.$router.push({ name: 'Home' });
+                }
+
             } catch (error) {
-                console.error('Login error:', error)
+                if (error.response?.data?.message) {
+                    toast.error(error.response.data.message);
+                } else {
+                    toast.error("Login failed. Please try again.");
+                }
             } finally {
                 this.isSubmitting = false;
             }
